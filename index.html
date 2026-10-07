@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="nl-BE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jobwijs</title>
+<meta name="description" content="Prototype van een Belgische jobsite: zoek op functie en plaats of beschrijf je ideale job in een prompt.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<a class="skip" href="#app">Naar de inhoud</a>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#home" aria-label="Jobwijs, naar de startpagina">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor"/><path d="M11 9v10.5a3.5 3.5 0 0 1-6 2.4" stroke="var(--brand-ink)" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="20.5" cy="17.5" r="5" stroke="var(--brand-ink)" stroke-width="3" fill="none"/><path d="M24 21l3.5 3.5" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg>
+      <span>jobwijs</span>
+    </a>
+    <nav class="topnav" aria-label="Hoofdmenu">
+      <a href="#resultaten" data-action="all-jobs">Alle vacatures</a>
+      <a href="#bewaard" class="saved-link">Bewaard <span class="count" id="saved-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main id="app" tabindex="-1"></main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <p><strong>Jobwijs</strong> is een klikbaar prototype. Alle vacatures, bedrijven en referenties zijn fictief, en er wordt niets verstuurd.</p>
+    <p class="muted">De promptzoeker draait in je browser en herkent functies, plaatsen, uren, contracten, loon, talen, ervaring en voordelen.</p>
+  </div>
+</footer>
+
+<dialog id="apply-dialog" aria-labelledby="apply-title">
+  <div class="dialog-body" id="apply-body"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="js/data.js"></script>
+<script src="js/prompt.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

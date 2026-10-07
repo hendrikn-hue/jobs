@@ -1,0 +1,1845 @@
+<!doctype html>
+<html lang="nl-BE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jobwijs</title>
+<meta name="description" content="Prototype van een Belgische jobsite: zoek op functie en plaats of beschrijf je ideale job in een prompt.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: smalle topbar, groene zoekband met witte zoekkaart, daarna 2-koloms werkruimte (filters | resultaten / tekst | sollicitatiekaart). */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --surface-2: #e9eeec;
+  --ink: #15201e;
+  --muted: #5a6866;
+  --line: #d9e1de;
+  --brand: #0f5a4e;
+  --brand-strong: #0a453b;
+  --brand-ink: #ffffff;
+  --brand-soft: #dcebe7;
+  --accent: #e5ae1f;
+  --accent-soft: #fbf0cf;
+  --accent-ink: #5a4100;
+  --good: #1f7a4a;
+  --bad: #a1452f;
+  --logo-bg-l: 89%;
+  --logo-fg-l: 28%;
+  --shadow: 0 1px 2px rgb(15 40 35 / 0.06), 0 8px 24px -12px rgb(15 40 35 / 0.18);
+
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --r: 10px;
+  --r-sm: 6px;
+  --wrap: 1180px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1513; --surface: #16201d; --surface-2: #1d2a26; --ink: #e5edea; --muted: #94a5a0; --line: #283632;
+    --brand: #4fb39f; --brand-strong: #6cc8b5; --brand-ink: #062019; --brand-soft: #18352f;
+    --accent: #f0c24b; --accent-soft: #3a3115; --accent-ink: #f6d98a; --good: #5cc28a; --bad: #e48a72;
+    --logo-bg-l: 24%; --logo-fg-l: 84%;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px -14px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1513; --surface: #16201d; --surface-2: #1d2a26; --ink: #e5edea; --muted: #94a5a0; --line: #283632;
+  --brand: #4fb39f; --brand-strong: #6cc8b5; --brand-ink: #062019; --brand-soft: #18352f;
+  --accent: #f0c24b; --accent-soft: #3a3115; --accent-ink: #f6d98a; --good: #5cc28a; --bad: #e48a72;
+  --logo-bg-l: 24%; --logo-fg-l: 84%;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px -14px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--f-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+main { flex: 1; outline: none; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+a { color: var(--brand); text-underline-offset: 3px; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.15; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+p { margin: 0; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: var(--wrap); margin-inline: auto; padding-inline: 20px; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--surface); padding: 8px 12px; z-index: 50; }
+.skip:focus { left: 8px; }
+.eyebrow { font: 600 12px/1.3 var(--f-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+/* Topbar */
+.topbar { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; }
+.topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 60px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: var(--brand); text-decoration: none; font: 800 23px/1 var(--f-display); letter-spacing: -0.03em; }
+.brand span { color: var(--ink); }
+.brand-mark { width: 30px; height: 30px; flex: none; }
+.topnav { display: flex; gap: 4px; }
+.topnav a { color: var(--ink); text-decoration: none; font-weight: 600; font-size: 15px; padding: 8px 12px; border-radius: var(--r-sm); display: inline-flex; gap: 8px; align-items: center; }
+.topnav a:hover { background: var(--surface-2); }
+.count { font: 500 12px/1 var(--f-mono); background: var(--brand-soft); color: var(--brand-strong); padding: 4px 7px; border-radius: 99px; min-width: 22px; text-align: center; }
+
+/* Buttons */
+.btn { font: 600 15px/1 var(--f-body); border-radius: var(--r-sm); border: 1px solid transparent; padding: 0 18px; height: 48px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; white-space: nowrap; transition: background .15s, border-color .15s, transform .1s; }
+.btn:active { transform: translateY(1px); }
+.btn svg { width: 18px; height: 18px; flex: none; }
+.btn.primary { background: var(--brand); color: var(--brand-ink); }
+.btn.primary:hover { background: var(--brand-strong); }
+.btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn.ghost:hover { border-color: var(--muted); }
+.btn.block { width: 100%; }
+.btn.small { height: 36px; font-size: 14px; padding: 0 12px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Zoekband */
+.band { background: var(--brand); color: var(--brand-ink); padding-block: 40px 96px; }
+.band.compact { padding-block: 20px 64px; }
+.band h1 { font-size: clamp(32px, 5vw, 54px); font-weight: 800; max-width: 16ch; letter-spacing: -0.03em; }
+.band h1 em { font-style: normal; color: var(--accent); }
+.band .lede { margin-top: 12px; max-width: 54ch; font-size: 18px; opacity: 0.9; }
+.tally { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 18px; font: 500 13px/1.4 var(--f-mono); opacity: 0.85; }
+.tally b { font-weight: 500; color: var(--accent); }
+.search-wrap { margin-top: -72px; position: relative; z-index: 2; }
+.band.compact + .wrap .search-wrap, .search-wrap.tight { margin-top: -48px; }
+
+.search { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); padding-inline: 8px; overflow-x: auto; }
+.tab { background: none; border: 0; font: 600 15px/1 var(--f-body); color: var(--muted); padding: 16px 14px 14px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .pill { font: 600 11px/1 var(--f-body); letter-spacing: 0.06em; text-transform: uppercase; background: var(--accent-soft); color: var(--accent-ink); padding: 4px 6px; border-radius: 4px; }
+.tab svg { width: 18px; height: 18px; flex: none; }
+
+.classic-form { display: grid; grid-template-columns: 1.3fr 1fr 130px auto; gap: 10px; padding: 16px; align-items: end; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field > span { font: 600 12px/1 var(--f-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.field input, .field select, .field textarea, .input {
+  font: 400 16px/1.3 var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); height: 48px; padding: 0 14px; width: 100%; min-width: 0;
+}
+.field input:focus, .field select:focus, .field textarea:focus, .prompt-box textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.field.withicon { position: relative; }
+.field.withicon input { padding-left: 40px; }
+.field.withicon svg { position: absolute; left: 13px; bottom: 15px; width: 18px; height: 18px; color: var(--muted); pointer-events: none; }
+
+.prompt-form { padding: 16px; display: grid; gap: 12px; }
+.prompt-box { position: relative; }
+.prompt-box textarea { width: 100%; font: 400 18px/1.45 var(--f-body); color: var(--ink); background: var(--accent-soft); border: 1px solid transparent; border-radius: var(--r-sm); padding: 14px 16px; resize: vertical; min-height: 92px; }
+.prompt-box textarea::placeholder { color: var(--muted); }
+.prompt-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.prompt-foot .hint { font-size: 14px; color: var(--muted); max-width: 60ch; }
+.examples { display: flex; flex-wrap: wrap; gap: 8px; }
+.example { font: 500 14px/1.3 var(--f-body); color: var(--ink); background: var(--surface); border: 1px dashed var(--line); border-radius: 99px; padding: 7px 12px; cursor: pointer; text-align: left; }
+.example:hover { border-color: var(--brand); color: var(--brand); }
+
+/* Startpagina */
+.home-sections { display: grid; gap: 48px; padding-block: 40px 64px; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-head h2 { font-size: 26px; font-weight: 700; }
+.prompt-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.prompt-card { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; cursor: pointer; font: inherit; color: var(--ink); display: grid; gap: 12px; align-content: space-between; }
+.prompt-card:hover { border-color: var(--brand); }
+.prompt-card q { font-size: 17px; line-height: 1.4; quotes: "“" "”"; }
+.prompt-card span { font: 500 13px/1.3 var(--f-mono); color: var(--brand); }
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.cat-grid a { background: var(--surface); padding: 16px 18px; text-decoration: none; color: var(--ink); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-weight: 600; }
+.cat-grid a:hover { background: var(--brand-soft); }
+.cat-grid .mono { color: var(--muted); font-size: 13px; font-weight: 400; }
+.region-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.region { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; text-decoration: none; color: var(--ink); display: grid; gap: 4px; }
+.region:hover { border-color: var(--brand); }
+.region strong { font: 700 22px/1.1 var(--f-display); }
+.region .mono { color: var(--muted); font-size: 13px; }
+
+/* Resultaten */
+.results-page { padding-block: 24px 64px; display: grid; gap: 20px; }
+.interpret { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; display: grid; gap: 12px; }
+.interpret-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.interpret-head h2 { font-size: 18px; font-weight: 700; }
+.interpret .quote { font-size: 15px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--brand-soft); color: var(--ink); border-radius: 99px; padding: 5px 6px 5px 12px; font-size: 14px; }
+.chip b { font-weight: 600; color: var(--brand-strong); }
+.chip button { border: 0; background: transparent; color: var(--muted); width: 24px; height: 24px; border-radius: 99px; cursor: pointer; display: grid; place-items: center; }
+.chip button:hover { background: var(--surface); color: var(--ink); }
+.chip.off { background: transparent; border: 1px dashed var(--line); color: var(--muted); padding-right: 12px; }
+.notice { background: var(--accent-soft); color: var(--ink); border-radius: var(--r-sm); padding: 12px 14px; font-size: 15px; }
+
+.res-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 28px; align-items: start; }
+.filters { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); max-height: calc(100vh - 92px); overflow: auto; }
+.filters summary { list-style: none; cursor: pointer; padding: 14px 16px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+.filters summary::-webkit-details-marker { display: none; }
+.filters summary .chev { transition: transform .2s; }
+.filters[open] summary .chev { transform: rotate(180deg); }
+.filter-body { padding: 0 16px 16px; display: grid; gap: 18px; }
+.fgroup { display: grid; gap: 6px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.fgroup legend, .fgroup > .flabel { font: 600 12px/1 var(--f-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; padding: 0; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; padding: 2px 0; }
+.check input { width: 18px; height: 18px; accent-color: var(--brand); margin: 0; flex: none; }
+.check .n { margin-left: auto; font: 400 12px/1 var(--f-mono); color: var(--muted); }
+.check.zero { opacity: 0.45; }
+.filters select { height: 40px; }
+
+.res-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.res-head h1 { font-size: clamp(22px, 3vw, 28px); font-weight: 700; }
+.res-head h1 .mono { font-family: var(--f-display); color: var(--brand); }
+.sort { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.sort select { height: 38px; width: auto; padding: 0 10px; }
+.job-list { display: grid; gap: 12px; }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: var(--r); padding: 32px; text-align: center; display: grid; gap: 12px; justify-items: center; }
+.empty h2 { font-size: 22px; }
+
+/* Jobkaart */
+.job-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 18px 16px; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 4px 16px; transition: border-color .15s, box-shadow .15s; }
+.job-card:hover { border-color: var(--brand); box-shadow: var(--shadow); }
+.job-card.visited h3 a { color: var(--muted); }
+.logo { --h: 160; width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; font: 800 18px/1 var(--f-display); letter-spacing: -0.02em; background: hsl(var(--h) 38% var(--logo-bg-l)); color: hsl(var(--h) 55% var(--logo-fg-l)); flex: none; }
+.logo.big { width: 72px; height: 72px; border-radius: 16px; font-size: 26px; }
+.job-main { min-width: 0; display: grid; gap: 6px; }
+.job-card h3 { font-size: 19px; font-weight: 700; }
+.job-card h3 a { color: var(--ink); text-decoration: none; }
+.job-card h3 a::after { content: ""; position: absolute; inset: 0; border-radius: var(--r); }
+.job-card h3 a:focus-visible { outline: none; }
+.job-card:has(h3 a:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.job-sub { color: var(--muted); font-size: 15px; }
+.job-sub strong { color: var(--ink); font-weight: 600; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.tag { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; line-height: 1; padding: 6px 9px; border-radius: 5px; background: var(--surface-2); color: var(--ink); white-space: nowrap; }
+.tag.salary { font-family: var(--f-mono); font-variant-numeric: tabular-nums; background: transparent; border: 1px solid var(--line); }
+.tag.knelpunt { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.tag.remote { background: var(--brand-soft); color: var(--brand-strong); }
+.tag svg { width: 14px; height: 14px; }
+.job-side { display: grid; justify-items: end; align-content: space-between; gap: 8px; position: relative; z-index: 1; }
+.posted { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.save { width: 40px; height: 40px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+.save:hover { color: var(--brand); border-color: var(--brand); }
+.save[aria-pressed="true"] { color: var(--brand-ink); background: var(--brand); border-color: var(--brand); }
+.save svg { width: 18px; height: 18px; }
+
+.match { grid-column: 2 / -1; margin-top: 10px; padding-top: 12px; border-top: 1px dashed var(--line); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; align-items: center; }
+.score { font: 700 15px/1 var(--f-mono); color: var(--accent-ink); background: var(--accent-soft); padding: 6px 8px; border-radius: 5px; font-variant-numeric: tabular-nums; }
+.score.mid { color: var(--ink); background: var(--surface-2); }
+.reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; }
+.reasons li { display: inline-flex; gap: 6px; align-items: baseline; }
+.reasons .ok::before { content: "✓"; color: var(--good); font-weight: 700; }
+.reasons .no { color: var(--muted); }
+.reasons .no::before { content: "✕"; color: var(--bad); font-weight: 700; }
+
+/* Detail */
+.detail-page { padding-block: 24px 64px; display: grid; gap: 28px; }
+.crumbs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.crumbs a { font-weight: 600; }
+.detail-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: start; }
+.detail-head h1 { font-size: clamp(28px, 4vw, 42px); font-weight: 800; letter-spacing: -0.025em; }
+.detail-head .company { font-size: 18px; margin-top: 6px; color: var(--muted); }
+.detail-head .company strong { color: var(--ink); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 14px; font-size: 15px; }
+.facts span { display: inline-flex; gap: 7px; align-items: center; }
+.facts svg { width: 17px; height: 17px; color: var(--brand); flex: none; }
+.detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 32px; align-items: start; }
+.detail-body { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(20px, 3vw, 36px); display: grid; gap: 28px; }
+.detail-body section { display: grid; gap: 10px; max-width: 68ch; }
+.detail-body h2 { font-size: 22px; font-weight: 700; }
+.detail-body ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.detail-body li::marker { color: var(--brand); }
+.benefits { list-style: none; padding: 0 !important; display: grid !important; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px !important; }
+.benefits li { background: var(--surface-2); border-radius: var(--r-sm); padding: 9px 12px; font-size: 15px; }
+.why-box { background: var(--accent-soft); border-radius: var(--r-sm); padding: 16px 18px; display: grid; gap: 10px; max-width: none !important; }
+.why-box h2 { font-size: 18px; }
+.why-box .reasons { flex-direction: column; gap: 6px; font-size: 15px; }
+.apply-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px; display: grid; gap: 14px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); }
+.apply-card .big-sal { font: 700 26px/1.1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.apply-card .big-sal small { display: block; font: 400 14px/1.4 var(--f-body); color: var(--muted); letter-spacing: 0; margin-top: 4px; }
+.applied { background: var(--brand-soft); color: var(--brand-strong); border-radius: var(--r-sm); padding: 10px 12px; font-weight: 600; font-size: 15px; }
+.dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px; margin: 0; font-size: 14px; border-top: 1px solid var(--line); padding-top: 14px; }
+.dl dt { color: var(--muted); }
+.dl dd { margin: 0; text-align: right; font-weight: 500; }
+.similar h2 { font-size: 24px; margin-bottom: 14px; }
+
+/* Dialoog */
+dialog { border: 0; border-radius: 14px; padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); background: var(--surface); color: var(--ink); box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.5); }
+dialog::backdrop { background: rgb(10 25 22 / 0.55); }
+.dialog-body { padding: 24px; display: grid; gap: 16px; }
+.dialog-body h2 { font-size: 24px; }
+.dialog-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.x { background: var(--surface-2); border: 0; width: 36px; height: 36px; border-radius: 99px; cursor: pointer; color: var(--ink); font-size: 18px; flex: none; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-grid .full { grid-column: 1 / -1; }
+.field textarea { height: auto; min-height: 110px; padding: 12px 14px; resize: vertical; }
+.field input[type="file"] { padding: 10px; height: auto; }
+.consent { display: flex; gap: 10px; font-size: 14px; color: var(--muted); align-items: start; }
+.consent input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--brand); flex: none; }
+.success { text-align: center; display: grid; gap: 12px; justify-items: center; padding-block: 12px; }
+.success .tick { width: 64px; height: 64px; border-radius: 99px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; }
+
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 8px; font-weight: 600; font-size: 15px; z-index: 60; box-shadow: var(--shadow); max-width: calc(100vw - 32px); }
+
+.footer { border-top: 1px solid var(--line); background: var(--surface); padding-block: 24px; font-size: 14px; }
+.footer-inner { display: grid; gap: 6px; }
+
+/* Responsief */
+@media (max-width: 960px) {
+  .classic-form { grid-template-columns: 1fr 1fr; }
+  .classic-form .btn { grid-column: 1 / -1; }
+  .res-layout, .detail-layout { grid-template-columns: minmax(0, 1fr); }
+  .filters { position: static; max-height: none; }
+  .apply-card { position: static; }
+}
+@media (max-width: 640px) {
+  .wrap { padding-inline: 16px; }
+  .band { padding-block: 28px 84px; }
+  .classic-form { grid-template-columns: 1fr; }
+  .region-row { grid-template-columns: 1fr; }
+  .job-card { grid-template-columns: 44px minmax(0, 1fr); padding: 16px; }
+  .job-card .logo { width: 44px; height: 44px; font-size: 16px; border-radius: 10px; }
+  .job-side { grid-column: 1 / -1; grid-row: 3; display: flex; justify-content: space-between; align-items: center; }
+  .match { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); }
+  .detail-head { grid-template-columns: minmax(0, 1fr); }
+  .form-grid { grid-template-columns: 1fr; }
+  .topnav a { padding: 8px; }
+  .hide-sm { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (max-width: 420px) { .tab { padding-inline: 10px; font-size: 14px; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#app">Naar de inhoud</a>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#home" aria-label="Jobwijs, naar de startpagina">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor"/><path d="M11 9v10.5a3.5 3.5 0 0 1-6 2.4" stroke="var(--brand-ink)" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="20.5" cy="17.5" r="5" stroke="var(--brand-ink)" stroke-width="3" fill="none"/><path d="M24 21l3.5 3.5" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg>
+      <span>jobwijs</span>
+    </a>
+    <nav class="topnav" aria-label="Hoofdmenu">
+      <a href="#resultaten" data-action="all-jobs">Alle vacatures</a>
+      <a href="#bewaard" class="saved-link">Bewaard <span class="count" id="saved-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main id="app" tabindex="-1"></main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <p><strong>Jobwijs</strong> is een klikbaar prototype. Alle vacatures, bedrijven en referenties zijn fictief, en er wordt niets verstuurd.</p>
+    <p class="muted">De promptzoeker draait in je browser en herkent functies, plaatsen, uren, contracten, loon, talen, ervaring en voordelen.</p>
+  </div>
+</footer>
+
+<dialog id="apply-dialog" aria-labelledby="apply-title">
+  <div class="dialog-body" id="apply-body"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+/* Jobwijs prototype — fictieve dataset.
+   Alle bedrijven, vacatures en referenties zijn verzonnen. */
+
+window.JW = window.JW || {};
+
+JW.CITIES = [
+  // name, postcode, province, region, lat, lng, aliases
+  { name: "Antwerpen", pc: "2000", prov: "Antwerpen", region: "Vlaanderen", lat: 51.2194, lng: 4.4025, alias: ["anvers", "antwerp"] },
+  { name: "Mechelen", pc: "2800", prov: "Antwerpen", region: "Vlaanderen", lat: 51.0259, lng: 4.4776, alias: ["malines"] },
+  { name: "Lier", pc: "2500", prov: "Antwerpen", region: "Vlaanderen", lat: 51.1310, lng: 4.5700, alias: [] },
+  { name: "Turnhout", pc: "2300", prov: "Antwerpen", region: "Vlaanderen", lat: 51.3227, lng: 4.9447, alias: [] },
+  { name: "Geel", pc: "2440", prov: "Antwerpen", region: "Vlaanderen", lat: 51.1617, lng: 4.9900, alias: [] },
+  { name: "Gent", pc: "9000", prov: "Oost-Vlaanderen", region: "Vlaanderen", lat: 51.0543, lng: 3.7174, alias: ["gand", "ghent"] },
+  { name: "Aalst", pc: "9300", prov: "Oost-Vlaanderen", region: "Vlaanderen", lat: 50.9378, lng: 4.0410, alias: ["alost"] },
+  { name: "Sint-Niklaas", pc: "9100", prov: "Oost-Vlaanderen", region: "Vlaanderen", lat: 51.1650, lng: 4.1437, alias: ["sint niklaas"] },
+  { name: "Dendermonde", pc: "9200", prov: "Oost-Vlaanderen", region: "Vlaanderen", lat: 51.0286, lng: 4.1010, alias: ["termonde"] },
+  { name: "Beveren", pc: "9120", prov: "Oost-Vlaanderen", region: "Vlaanderen", lat: 51.2120, lng: 4.2560, alias: [] },
+  { name: "Brugge", pc: "8000", prov: "West-Vlaanderen", region: "Vlaanderen", lat: 51.2093, lng: 3.2247, alias: ["bruges"] },
+  { name: "Kortrijk", pc: "8500", prov: "West-Vlaanderen", region: "Vlaanderen", lat: 50.8280, lng: 3.2649, alias: ["courtrai"] },
+  { name: "Oostende", pc: "8400", prov: "West-Vlaanderen", region: "Vlaanderen", lat: 51.2154, lng: 2.9286, alias: ["ostende", "ostend"] },
+  { name: "Roeselare", pc: "8800", prov: "West-Vlaanderen", region: "Vlaanderen", lat: 50.9465, lng: 3.1227, alias: ["roulers"] },
+  { name: "Ieper", pc: "8900", prov: "West-Vlaanderen", region: "Vlaanderen", lat: 50.8503, lng: 2.8853, alias: ["ypres"] },
+  { name: "Leuven", pc: "3000", prov: "Vlaams-Brabant", region: "Vlaanderen", lat: 50.8798, lng: 4.7005, alias: ["louvain"] },
+  { name: "Vilvoorde", pc: "1800", prov: "Vlaams-Brabant", region: "Vlaanderen", lat: 50.9281, lng: 4.4245, alias: [] },
+  { name: "Zaventem", pc: "1930", prov: "Vlaams-Brabant", region: "Vlaanderen", lat: 50.8830, lng: 4.4720, alias: [] },
+  { name: "Hasselt", pc: "3500", prov: "Limburg", region: "Vlaanderen", lat: 50.9307, lng: 5.3325, alias: [] },
+  { name: "Genk", pc: "3600", prov: "Limburg", region: "Vlaanderen", lat: 50.9650, lng: 5.5008, alias: [] },
+  { name: "Brussel", pc: "1000", prov: "Brussel", region: "Brussel", lat: 50.8503, lng: 4.3517, alias: ["bruxelles", "brussels"] },
+  { name: "Wavre", pc: "1300", prov: "Waals-Brabant", region: "Wallonië", lat: 50.7170, lng: 4.6010, alias: ["waver"] },
+  { name: "Ottignies-Louvain-la-Neuve", pc: "1340", prov: "Waals-Brabant", region: "Wallonië", lat: 50.6680, lng: 4.6120, alias: ["louvain-la-neuve", "ottignies", "lln"] },
+  { name: "Namur", pc: "5000", prov: "Namen", region: "Wallonië", lat: 50.4674, lng: 4.8720, alias: ["namen"] },
+  { name: "Liège", pc: "4000", prov: "Luik", region: "Wallonië", lat: 50.6326, lng: 5.5797, alias: ["luik", "liege"] },
+  { name: "Eupen", pc: "4700", prov: "Luik", region: "Wallonië", lat: 50.6300, lng: 6.0300, alias: [] },
+  { name: "Charleroi", pc: "6000", prov: "Henegouwen", region: "Wallonië", lat: 50.4108, lng: 4.4446, alias: [] },
+  { name: "Mons", pc: "7000", prov: "Henegouwen", region: "Wallonië", lat: 50.4542, lng: 3.9523, alias: ["bergen"] },
+  { name: "Arlon", pc: "6700", prov: "Luxemburg", region: "Wallonië", lat: 49.6833, lng: 5.8167, alias: ["aarlen"] }
+];
+
+JW.PROVINCES = ["Antwerpen", "Oost-Vlaanderen", "West-Vlaanderen", "Vlaams-Brabant", "Limburg", "Brussel", "Waals-Brabant", "Namen", "Luik", "Henegouwen", "Luxemburg"];
+JW.REGIONS = ["Vlaanderen", "Brussel", "Wallonië"];
+
+JW.CATEGORIES = [
+  { id: "ict", label: "ICT & Digitaal" },
+  { id: "zorg", label: "Zorg & Welzijn" },
+  { id: "logistiek", label: "Logistiek & Transport" },
+  { id: "techniek", label: "Techniek & Onderhoud" },
+  { id: "bouw", label: "Bouw & Installatie" },
+  { id: "onderwijs", label: "Onderwijs & Kinderopvang" },
+  { id: "finance", label: "Financiën & Boekhouding" },
+  { id: "sales", label: "Verkoop & Marketing" },
+  { id: "admin", label: "HR & Administratie" },
+  { id: "horeca", label: "Horeca & Voeding" },
+  { id: "productie", label: "Productie & Industrie" }
+];
+
+JW.BENEFITS = {
+  maaltijd: "Maaltijdcheques",
+  eco: "Ecocheques",
+  hosp: "Hospitalisatieverzekering",
+  groep: "Groepsverzekering",
+  wagen: "Bedrijfswagen met tankkaart",
+  mobi: "Mobiliteitsbudget",
+  fiets: "Fietslease",
+  gsm: "Gsm-abonnement",
+  laptop: "Laptop",
+  dertiende: "13de maand",
+  extraverlof: "Extra verlofdagen (ADV)",
+  thuiswerkverg: "Thuiswerkvergoeding",
+  opleiding: "Opleidingsbudget",
+  ploegpremie: "Ploegenpremie",
+  vervoer: "Terugbetaling woon-werkverkeer"
+};
+
+JW.COMPANIES = [
+  { id: "brabo", name: "Brabo Software", city: "Antwerpen", sector: "ict", size: "120 medewerkers", hue: 168, about: "Brabo Software bouwt planningssoftware voor havenbedrijven en logistieke spelers in de Benelux. Een vlakke organisatie met korte lijnen en veel ruimte voor eigen initiatief." },
+  { id: "pixelpoort", name: "Pixelpoort", city: "Gent", sector: "ict", size: "45 medewerkers", hue: 280, about: "Digitaal bureau aan de Coupure dat websites en apps maakt voor cultuurhuizen, steden en kmo's." },
+  { id: "fintek", name: "Fintek Benelux", city: "Brussel", sector: "finance", size: "300 medewerkers", hue: 215, about: "Fintek Benelux levert betaal- en boekhoudsoftware aan banken en accountantskantoren. Hoofdkantoor vlak bij Brussel-Centraal." },
+  { id: "senne", name: "Senne Consulting", city: "Brussel", sector: "finance", size: "60 medewerkers", hue: 30, about: "Advieskantoor in fiscaliteit en bedrijfsfinanciering voor familiebedrijven, actief in het Nederlands, Frans en Engels." },
+  { id: "dijle", name: "Dijlevallei Ziekenhuis", city: "Leuven", sector: "zorg", size: "1.800 medewerkers", hue: 355, about: "Algemeen ziekenhuis met 520 bedden en een sterke focus op geriatrie, oncologie en revalidatie." },
+  { id: "zorgnet", name: "Zorgnet Leie", city: "Gent", sector: "zorg", size: "650 medewerkers", hue: 340, about: "Netwerk van thuiszorg, dagcentra en assistentiewoningen in Gent en de Leiestreek." },
+  { id: "terlinde", name: "WZC Hof ter Linde", city: "Kortrijk", sector: "zorg", size: "140 medewerkers", hue: 12, about: "Woonzorgcentrum met 110 bewoners, kleinschalige leefgroepen en een eigen keuken." },
+  { id: "klaver", name: "Kinderopvang Klavertje Vier", city: "Mechelen", sector: "onderwijs", size: "35 medewerkers", hue: 95, about: "Drie kinderdagverblijven in Mechelen en omgeving, erkend door Opgroeien." },
+  { id: "campus", name: "Campus Schelde", city: "Antwerpen", sector: "onderwijs", size: "210 medewerkers", hue: 200, about: "Secundaire school met technische en beroepsrichtingen, sterk in duaal leren met bedrijven uit de haven." },
+  { id: "schelde", name: "Scheldewerk Logistics", city: "Antwerpen", sector: "logistiek", size: "900 medewerkers", hue: 190, about: "Logistiek dienstverlener met opslag, overslag en distributie vanuit de Antwerpse haven." },
+  { id: "zenne", name: "Zennevallei Transport", city: "Vilvoorde", sector: "logistiek", size: "180 medewerkers", hue: 45, about: "Familiaal transportbedrijf met 110 vrachtwagens, gespecialiseerd in gekoeld vervoer." },
+  { id: "kempen", name: "Kempen Kabels", city: "Geel", sector: "productie", size: "420 medewerkers", hue: 25, about: "Producent van energie- en datakabels, met afnemers in heel Europa." },
+  { id: "waasland", name: "Waasland Chemie", city: "Beveren", sector: "productie", size: "650 medewerkers", hue: 140, about: "Chemische productiesite in het havengebied Waasland, met een sterke veiligheidscultuur." },
+  { id: "sambre", name: "Sambre Métal", city: "Charleroi", sector: "productie", size: "250 medewerkers", hue: 10, about: "Metaalbewerking en staalconstructie voor bruggen en industriële gebouwen." },
+  { id: "maasland", name: "Maasland Bouw", city: "Genk", sector: "bouw", size: "160 medewerkers", hue: 35, about: "Algemene aannemer voor woningbouw, scholen en renovatieprojecten in Limburg." },
+  { id: "ijzer", name: "IJzer & Co Elektro", city: "Roeselare", sector: "techniek", size: "55 medewerkers", hue: 55, about: "Elektrotechnische installaties voor kmo's, landbouwbedrijven en zonneparken in West-Vlaanderen." },
+  { id: "kouter", name: "Groene Kouter", city: "Aalst", sector: "bouw", size: "40 medewerkers", hue: 120, about: "Tuinaanleg en groenonderhoud voor particulieren, gemeenten en bedrijventerreinen." },
+  { id: "mosa", name: "Mosa Energie", city: "Namur", sector: "techniek", size: "380 medewerkers", hue: 260, about: "Waalse energieleverancier die investeert in warmtepompen, zonne-energie en slimme netten." },
+  { id: "limlab", name: "Limburg Lab", city: "Hasselt", sector: "zorg", size: "90 medewerkers", hue: 300, about: "Klinisch labo met vestigingen in Hasselt en Genk, voor huisartsen en ziekenhuizen." },
+  { id: "duinzicht", name: "Duinzicht Hotels", city: "Oostende", sector: "horeca", size: "120 medewerkers", hue: 205, about: "Drie hotels aan de kust met restaurant, wellness en vergaderzalen." },
+  { id: "noordzee", name: "Noordzee Fresh", city: "Brugge", sector: "horeca", size: "230 medewerkers", hue: 185, about: "Verwerker van verse vis en kant-en-klare maaltijden voor retail en grootkeukens." },
+  { id: "polder", name: "Polder Retail", city: "Sint-Niklaas", sector: "sales", size: "75 winkels", hue: 330, about: "Keten van doe-het-zelf- en tuinwinkels in Vlaanderen." },
+  { id: "lumiere", name: "Atelier Lumière", city: "Liège", sector: "sales", size: "70 medewerkers", hue: 50, about: "Ontwerper en verdeler van verlichting voor winkels, hotels en kantoren." },
+  { id: "wavrepharma", name: "Wavre Pharma Solutions", city: "Wavre", sector: "productie", size: "540 medewerkers", hue: 225, about: "Contractproducent van vaccins en steriele geneesmiddelen." },
+  { id: "monsdigital", name: "Mons Digital", city: "Mons", sector: "ict", size: "85 medewerkers", hue: 160, about: "Datacenter- en clouddienstverlener voor overheden en ziekenhuizen in Wallonië." },
+  { id: "ostbelgien", name: "Ostbelgien Tech", city: "Eupen", sector: "techniek", size: "65 medewerkers", hue: 0, about: "Automatisering en robotica voor de voedingsindustrie, actief in België, Duitsland en Luxemburg." },
+  { id: "turnprint", name: "Turnhout Print & Pack", city: "Turnhout", sector: "productie", size: "190 medewerkers", hue: 275, about: "Drukkerij en verpakkingsbedrijf met een lange traditie in de Kempen." },
+  { id: "admina", name: "Admina Sociaal Secretariaat", city: "Hasselt", sector: "admin", size: "260 medewerkers", hue: 240, about: "Sociaal secretariaat voor zo'n 9.000 werkgevers, van starters tot grote kmo's." },
+  { id: "brugsebakkers", name: "Brugse Bakkers", city: "Brugge", sector: "horeca", size: "50 medewerkers", hue: 28, about: "Ambachtelijke bakkerij met vier winkels en een atelier in Sint-Andries." },
+  { id: "ardenne", name: "Ardenne Bois", city: "Arlon", sector: "bouw", size: "70 medewerkers", hue: 100, about: "Houtbouw en houtskeletwoningen, met eigen zagerij en atelier." },
+  { id: "kustgemeente", name: "Intercommunale Kust & Polder", city: "Ieper", sector: "admin", size: "400 medewerkers", hue: 210, about: "Fictieve intergemeentelijke dienstverlener voor afval, water en ruimtelijke planning." }
+];
+
+/* Rolsjablonen. exp = minimum jaren ervaring; edu: geen | secundair | bachelor | master.
+   tags: mensen, buiten, handen, creatief, cijfers, analytisch */
+JW.ROLES = [
+  {
+    key: "devjr", title: "Junior .NET-ontwikkelaar", cat: "ict", sectors: ["ict", "finance"],
+    kw: ["developer", "ontwikkelaar", "programmeur", "software", "c#", ".net", "it"],
+    sal: [2900, 3500], pc: "PC 200", edu: "bachelor", exp: 0, regime: ["voltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: true, tags: ["analytisch"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "laptop", "thuiswerkverg", "opleiding", "mobi"],
+    intro: "Je start in een team van zes ontwikkelaars dat een webplatform voor {sector} verder uitbouwt. Een senior collega begeleidt je de eerste maanden als vaste buddy.",
+    tasks: ["Je bouwt nieuwe functionaliteit in C# en ASP.NET Core.", "Je schrijft unit tests en doet code reviews met je collega's.", "Je zoekt samen met de product owner uit wat gebruikers echt nodig hebben.", "Je lost bugs op die via de helpdesk binnenkomen."],
+    profile: ["Je hebt een bachelor toegepaste informatica of je leerde programmeren op een andere manier.", "Je kent de basis van C# of een verwante taal zoals Java.", "Je bent nieuwsgierig en stelt graag vragen.", "Je spreekt vlot Nederlands en kan technische teksten in het Engels lezen."]
+  },
+  {
+    key: "devsr", title: "Senior full-stack developer", cat: "ict", sectors: ["ict"],
+    kw: ["developer", "ontwikkelaar", "programmeur", "full-stack", "react", "typescript", "node", "it"],
+    sal: [4200, 5600], pc: "PC 200", edu: "bachelor", exp: 5, regime: ["voltijds"], contract: ["vast", "freelance"],
+    remote: "remote", shifts: false, weekend: false, knelpunt: true, tags: ["analytisch"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "wagen", "laptop", "gsm", "thuiswerkverg", "opleiding"],
+    intro: "Je neemt technische verantwoordelijkheid voor een product dat dagelijks door duizenden mensen gebruikt wordt. Je werkt grotendeels van thuis, met één teamdag per week op kantoor.",
+    tasks: ["Je ontwerpt en bouwt features van database tot front-end (TypeScript, React, Node.js).", "Je coacht junior collega's en bewaakt de codekwaliteit.", "Je denkt mee over architectuur, performantie en beveiliging.", "Je automatiseert deployments in de cloud."],
+    profile: ["Minstens vijf jaar ervaring als developer.", "Je hebt ervaring met TypeScript en een modern front-end framework.", "Je communiceert helder met niet-technische collega's.", "Engels is geen probleem; Nederlands of Frans is een plus."]
+  },
+  {
+    key: "data", title: "Data-analist", cat: "ict", sectors: ["ict", "finance", "zorg", "admin"],
+    kw: ["data", "analist", "sql", "power bi", "rapportering", "analytics", "it"],
+    sal: [3300, 4300], pc: "PC 200", edu: "master", exp: 2, regime: ["voltijds", "deeltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: false, tags: ["analytisch", "cijfers"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "laptop", "thuiswerkverg", "mobi"],
+    intro: "Je maakt cijfers begrijpelijk voor het management en de teams op de werkvloer. Je werkt nauw samen met de afdeling {sector}.",
+    tasks: ["Je bouwt dashboards in Power BI.", "Je schrijft SQL-queries en controleert de datakwaliteit.", "Je vertaalt vragen van collega's naar concrete analyses.", "Je presenteert je inzichten aan het managementteam."],
+    profile: ["Master in een kwantitatieve richting of gelijkwaardig door ervaring.", "Twee jaar ervaring met SQL en een BI-tool.", "Je kan een verhaal vertellen met cijfers.", "Goede kennis van Nederlands en Engels."]
+  },
+  {
+    key: "helpdesk", title: "Servicedeskmedewerker IT", cat: "ict", sectors: ["ict", "zorg", "productie", "admin"],
+    kw: ["helpdesk", "servicedesk", "support", "it", "ict", "systeembeheer"],
+    sal: [2500, 3000], pc: "PC 200", edu: "secundair", exp: 0, regime: ["voltijds"], contract: ["vast", "interim"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: false, tags: ["mensen"],
+    ben: ["maaltijd", "eco", "hosp", "laptop", "opleiding", "vervoer"],
+    intro: "Je bent het eerste aanspreekpunt voor collega's met IT-vragen. Geen dag is hetzelfde: van een laptop installeren tot een netwerkprobleem opsporen.",
+    tasks: ["Je beantwoordt vragen via telefoon, chat en ticketsysteem.", "Je installeert en configureert laptops en smartphones.", "Je beheert gebruikersaccounts in Microsoft 365.", "Je escaleert complexe problemen naar de systeembeheerders."],
+    profile: ["Je hebt een diploma secundair onderwijs, bij voorkeur in een IT-richting.", "Je legt technische zaken eenvoudig uit.", "Je bent klantvriendelijk en geduldig.", "Je bent tweetalig Nederlands-Frans of bereid om Frans bij te leren."]
+  },
+  {
+    key: "verpleeg", title: "Verpleegkundige", cat: "zorg", sectors: ["zorg"],
+    kw: ["verpleegkundige", "verpleger", "verpleging", "zorg", "ziekenhuis", "bachelor verpleegkunde"],
+    sal: [2900, 3800], pc: "PC 330", edu: "bachelor", exp: 0, regime: ["voltijds", "deeltijds"], contract: ["vast"],
+    remote: "geen", shifts: true, weekend: true, knelpunt: true, tags: ["mensen"],
+    ben: ["eco", "hosp", "fiets", "extraverlof", "opleiding", "vervoer", "ploegpremie"],
+    intro: "Je komt terecht in een warm team op een afdeling met 28 bedden. Patiëntgerichte zorg en een goede verstandhouding met artsen staan centraal.",
+    tasks: ["Je verleent verpleegkundige zorg volgens de geldende protocols.", "Je volgt patiënten op en registreert in het elektronisch patiëntendossier.", "Je informeert patiënten en familie.", "Je werkt mee aan kwaliteitsprojecten op de afdeling."],
+    profile: ["Bachelor of gegradueerde in de verpleegkunde met RIZIV-nummer.", "Pas afgestudeerd? Je krijgt een uitgebreid inwerktraject.", "Je bent bereid om in een wisselend uurrooster te werken.", "Je spreekt goed Nederlands."]
+  },
+  {
+    key: "zorgkundige", title: "Zorgkundige", cat: "zorg", sectors: ["zorg"],
+    kw: ["zorgkundige", "zorg", "ouderen", "woonzorgcentrum", "verzorging", "rusthuis"],
+    sal: [2400, 2900], pc: "PC 330", edu: "secundair", exp: 0, regime: ["deeltijds", "voltijds"], contract: ["vast", "tijdelijk"],
+    remote: "geen", shifts: true, weekend: true, knelpunt: true, tags: ["mensen", "handen"],
+    ben: ["eco", "hosp", "fiets", "extraverlof", "vervoer", "ploegpremie"],
+    intro: "Je zorgt dat bewoners zich thuis voelen. In onze kleinschalige leefgroepen heb je tijd voor een babbel en een wandeling.",
+    tasks: ["Je helpt bewoners bij wassen, aankleden en maaltijden.", "Je volgt de gezondheid van bewoners op en rapporteert aan de verpleegkundige.", "Je organiseert mee kleine activiteiten.", "Je werkt nauw samen met familie en vrijwilligers."],
+    profile: ["Je hebt een visum als zorgkundige of bent bijna afgestudeerd.", "Je hebt een groot hart voor ouderen.", "Je kan werken in vroege en late diensten en af en toe in het weekend.", "Je spreekt Nederlands."]
+  },
+  {
+    key: "thuisverpleeg", title: "Thuisverpleegkundige", cat: "zorg", sectors: ["zorg"],
+    kw: ["thuisverpleging", "verpleegkundige", "thuiszorg", "zorg"],
+    sal: [3000, 3700], pc: "PC 330", edu: "bachelor", exp: 0, regime: ["deeltijds", "voltijds"], contract: ["vast"],
+    remote: "geen", shifts: false, weekend: true, knelpunt: true, tags: ["mensen"],
+    ben: ["wagen", "gsm", "eco", "hosp", "extraverlof", "opleiding"],
+    intro: "Je trekt met een elektrische dienstwagen naar patiënten thuis in een vaste regio. Je plant je ronde zelf mee in.",
+    tasks: ["Je verzorgt wonden, geeft injecties en begeleidt chronische patiënten.", "Je volgt patiënten op met de tablet.", "Je overlegt met huisartsen en apothekers.", "Je draait gemiddeld één weekend op vier mee."],
+    profile: ["Bachelor verpleegkunde met RIZIV-nummer.", "Je hebt een rijbewijs B.", "Je werkt graag zelfstandig.", "Je hebt geen ploegwerk, wel af en toe weekenddienst."]
+  },
+  {
+    key: "laborant", title: "Medisch laboratoriumtechnoloog", cat: "zorg", sectors: ["zorg", "productie"],
+    kw: ["labo", "laborant", "laboratorium", "biomedisch", "analyse"],
+    sal: [2800, 3500], pc: "PC 330", edu: "bachelor", exp: 0, regime: ["voltijds", "deeltijds"], contract: ["vast"],
+    remote: "geen", shifts: true, weekend: false, knelpunt: true, tags: ["analytisch", "handen"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "fiets", "ploegpremie"],
+    intro: "In een modern en sterk geautomatiseerd labo analyseer je stalen voor huisartsen en ziekenhuizen.",
+    tasks: ["Je voert hematologische en biochemische analyses uit.", "Je bedient en kalibreert de analyzers.", "Je valideert resultaten technisch.", "Je werkt mee aan accreditatie volgens ISO 15189."],
+    profile: ["Bachelor in de biomedische laboratoriumtechnologie.", "Nauwkeurig en stressbestendig.", "Bereid om in een vroege of late dienst te werken.", "Kennis van Nederlands; Engels is een plus."]
+  },
+  {
+    key: "magazijn", title: "Magazijnmedewerker", cat: "logistiek", sectors: ["logistiek", "sales", "productie"],
+    kw: ["magazijn", "magazijnier", "orderpicker", "logistiek", "heftruck", "reachtruck"],
+    sal: [2300, 2700], pc: "PC 226", edu: "geen", exp: 0, regime: ["voltijds"], contract: ["interim", "vast"],
+    remote: "geen", shifts: true, weekend: false, knelpunt: false, tags: ["handen"],
+    ben: ["maaltijd", "eco", "ploegpremie", "vervoer", "fiets"],
+    intro: "Je werkt in een magazijn van 40.000 m² waar elke dag honderden bestellingen vertrekken. Na drie maanden interim krijg je uitzicht op een vast contract.",
+    tasks: ["Je verzamelt orders met een handscanner.", "Je laadt en lost vrachtwagens met de heftruck.", "Je controleert inkomende goederen.", "Je houdt je werkzone net en veilig."],
+    profile: ["Geen diploma of ervaring nodig: je krijgt een opleiding.", "Een heftruckattest is een plus.", "Je kan werken in een twee-ploegensysteem (6-14 u en 14-22 u).", "Je bent fysiek fit."]
+  },
+  {
+    key: "chauffeur", title: "Vrachtwagenchauffeur CE", cat: "logistiek", sectors: ["logistiek", "horeca"],
+    kw: ["chauffeur", "vrachtwagen", "transport", "rijbewijs ce", "trucker", "camion"],
+    sal: [2700, 3300], pc: "PC 140", edu: "geen", exp: 1, regime: ["voltijds"], contract: ["vast"],
+    remote: "geen", shifts: false, weekend: false, knelpunt: true, tags: ["buiten"],
+    ben: ["maaltijd", "eco", "hosp", "gsm"],
+    intro: "Je rijdt nationale ritten met gekoelde ladingen en bent elke avond thuis. Je krijgt een vaste, recente vrachtwagen.",
+    tasks: ["Je levert bij supermarkten en groothandels.", "Je laadt en lost met de elektrische transpallet.", "Je volgt de temperatuur van je lading op.", "Je registreert je ritten digitaal."],
+    profile: ["Rijbewijs CE, code 95 en een geldige bestuurderskaart.", "Minstens één jaar rijervaring.", "Je bent stipt en klantvriendelijk.", "Basiskennis Frans is handig voor leveringen in Brussel."]
+  },
+  {
+    key: "dispatch", title: "Transportplanner", cat: "logistiek", sectors: ["logistiek"],
+    kw: ["planner", "dispatcher", "transport", "logistiek", "planning"],
+    sal: [2900, 3600], pc: "PC 200", edu: "bachelor", exp: 2, regime: ["voltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: false, tags: ["analytisch", "mensen"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "gsm", "laptop"],
+    intro: "Je zorgt dat elke vrachtwagen op het juiste moment op de juiste plaats is, en je bent de spil tussen klanten en chauffeurs.",
+    tasks: ["Je plant dagelijks de ritten van 30 chauffeurs.", "Je speelt in op last-minute wijzigingen.", "Je onderhoudt het contact met klanten.", "Je zoekt manieren om lege kilometers te vermijden."],
+    profile: ["Bachelor logistiek of gelijkwaardig door ervaring.", "Twee jaar ervaring in transport of logistiek.", "Je blijft rustig onder druk.", "Nederlands, Frans en Engels."]
+  },
+  {
+    key: "elektricien", title: "Elektricien", cat: "techniek", sectors: ["techniek", "bouw"],
+    kw: ["elektricien", "elektrotechniek", "elektriciteit", "installateur", "technieker"],
+    sal: [2600, 3300], pc: "PC 149.01", edu: "secundair", exp: 0, regime: ["voltijds"], contract: ["vast"],
+    remote: "geen", shifts: false, weekend: false, knelpunt: true, tags: ["handen", "buiten"],
+    ben: ["maaltijd", "eco", "hosp", "wagen", "gsm", "dertiende"],
+    intro: "Je werkt aan de installatie van zonnepanelen, laadpalen en elektrische borden. Je rijdt met een bestelwagen die je mee naar huis mag nemen.",
+    tasks: ["Je plaatst en sluit elektrische installaties aan.", "Je zoekt storingen en lost ze op.", "Je werkt volgens het AREI.", "Je rapporteert digitaal over je werfbezoeken."],
+    profile: ["Diploma elektriciteit of elektrotechniek (secundair).", "Starters zijn welkom, ervaren elektriciens ook.", "Je werkt nauwkeurig en veilig.", "Rijbewijs B."]
+  },
+  {
+    key: "onderhoud", title: "Onderhoudstechnieker", cat: "techniek", sectors: ["productie", "techniek"],
+    kw: ["technieker", "onderhoud", "mechanica", "elektromechanica", "maintenance", "monteur"],
+    sal: [2900, 3800], pc: "PC 111", edu: "secundair", exp: 2, regime: ["voltijds"], contract: ["vast"],
+    remote: "geen", shifts: true, weekend: false, knelpunt: true, tags: ["handen", "analytisch"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "ploegpremie", "dertiende", "extraverlof"],
+    intro: "Je houdt de productielijnen draaiende. Je werkt in een team van twaalf technici in een vol-continu rooster, met een stevige ploegenpremie.",
+    tasks: ["Je voert preventief en correctief onderhoud uit.", "Je zoekt storingen in mechanische, pneumatische en elektrische systemen.", "Je stelt verbeteringen voor om stilstand te vermijden.", "Je registreert interventies in het onderhoudssysteem."],
+    profile: ["Diploma elektromechanica of gelijkwaardig.", "Twee jaar ervaring in een industriële omgeving.", "Bereid om in ploegen te werken.", "Kennis van PLC's is een plus."]
+  },
+  {
+    key: "hvac", title: "Technieker warmtepompen", cat: "techniek", sectors: ["techniek", "bouw"],
+    kw: ["technieker", "warmtepomp", "hvac", "verwarming", "koeltechniek", "installateur", "energie"],
+    sal: [2800, 3600], pc: "PC 111", edu: "secundair", exp: 1, regime: ["voltijds"], contract: ["vast"],
+    remote: "geen", shifts: false, weekend: false, knelpunt: true, tags: ["handen", "buiten"],
+    ben: ["maaltijd", "eco", "hosp", "wagen", "gsm", "opleiding"],
+    intro: "Je helpt gezinnen de overstap maken naar duurzame verwarming. Je krijgt een opleiding voor het F-gassencertificaat als je dat nog niet hebt.",
+    tasks: ["Je installeert en start warmtepompen op.", "Je doet onderhoud en herstellingen bij klanten thuis.", "Je legt klanten uit hoe ze hun installatie best gebruiken.", "Je werkt met een tablet voor werkbonnen."],
+    profile: ["Technisch diploma (koeltechniek, HVAC of elektromechanica).", "Een jaar ervaring of een sterke motivatie om bij te leren.", "Rijbewijs B.", "Je bent klantvriendelijk."]
+  },
+  {
+    key: "werfleider", title: "Werfleider", cat: "bouw", sectors: ["bouw"],
+    kw: ["werfleider", "bouw", "werf", "projectleider", "aannemer", "conducteur"],
+    sal: [3400, 4500], pc: "PC 200", edu: "bachelor", exp: 3, regime: ["voltijds"], contract: ["vast"],
+    remote: "geen", shifts: false, weekend: false, knelpunt: true, tags: ["mensen", "buiten"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "wagen", "gsm", "laptop"],
+    intro: "Je bent verantwoordelijk voor twee à drie werven tegelijk, van ruwbouw tot oplevering.",
+    tasks: ["Je plant het werk van eigen ploegen en onderaannemers.", "Je bewaakt timing, budget en veiligheid.", "Je bent het aanspreekpunt voor architect en bouwheer.", "Je doet werfvergaderingen en maakt verslagen."],
+    profile: ["Bachelor bouwkunde of gelijkwaardig.", "Minstens drie jaar ervaring op de werf.", "Je bent een natuurlijke leider.", "Rijbewijs B."]
+  },
+  {
+    key: "tuin", title: "Tuinaanlegger", cat: "bouw", sectors: ["bouw"],
+    kw: ["tuinman", "tuinaanleg", "groenonderhoud", "hovenier", "tuinier"],
+    sal: [2300, 2800], pc: "PC 145", edu: "geen", exp: 0, regime: ["voltijds"], contract: ["vast", "tijdelijk"],
+    remote: "geen", shifts: false, weekend: false, knelpunt: false, tags: ["buiten", "handen", "creatief"],
+    ben: ["maaltijd", "eco", "hosp", "vervoer"],
+    intro: "Je werkt de hele dag buiten in een ploeg van drie, aan tuinen die we zelf ontwerpen.",
+    tasks: ["Je legt terrassen, paden en beplanting aan.", "Je onderhoudt tuinen en groenzones.", "Je bedient kleine machines zoals een minigraver.", "Je denkt mee over het ontwerp."],
+    profile: ["Geen diploma nodig; een opleiding tuinbouw is een plus.", "Je werkt graag buiten, ook bij minder weer.", "Rijbewijs B is een plus.", "Je bent een teamspeler."]
+  },
+  {
+    key: "schrijnwerker", title: "Schrijnwerker houtbouw", cat: "bouw", sectors: ["bouw"],
+    kw: ["schrijnwerker", "timmerman", "houtbouw", "hout", "menuisier"],
+    sal: [2500, 3100], pc: "PC 125", edu: "secundair", exp: 1, regime: ["voltijds"], contract: ["vast"],
+    remote: "geen", shifts: false, weekend: false, knelpunt: true, tags: ["handen", "creatief"],
+    ben: ["maaltijd", "eco", "hosp", "dertiende"],
+    intro: "Je bouwt houtskeletwanden in ons atelier en plaatst ze mee op de werf.",
+    tasks: ["Je leest plannen en zaagt elementen op maat.", "Je assembleert wanden, vloeren en daken.", "Je plaatst elementen op de werf.", "Je werkt met CNC-gestuurde machines."],
+    profile: ["Diploma houtbewerking of ervaring als schrijnwerker.", "Je werkt nauwkeurig.", "Je hebt geen hoogtevrees.", "Frans is de voertaal op de werf."]
+  },
+  {
+    key: "leerkracht", title: "Leerkracht elektromechanica", cat: "onderwijs", sectors: ["onderwijs"],
+    kw: ["leerkracht", "leraar", "onderwijs", "lesgever", "school", "techniek"],
+    sal: [2700, 3600], pc: "Onderwijs", edu: "bachelor", exp: 0, regime: ["deeltijds", "voltijds"], contract: ["tijdelijk"],
+    remote: "geen", shifts: false, weekend: false, knelpunt: true, tags: ["mensen", "handen"],
+    ben: ["extraverlof", "fiets", "vervoer", "opleiding"],
+    intro: "Je geeft praktijkles aan leerlingen in de derde graad. Zij-instromers met bedrijfservaring zijn erg welkom, je ervaringsjaren tellen mee voor je loon.",
+    tasks: ["Je geeft praktijk- en theorielessen elektromechanica.", "Je begeleidt leerlingen tijdens stages en duaal leren.", "Je werkt mee aan nieuwe lesprojecten.", "Je overlegt met collega's en ouders."],
+    profile: ["Technisch diploma; een pedagogisch bekwaamheidsbewijs kan je tijdens je job halen.", "Je wil jongeren iets bijbrengen.", "Je hebt geduld en gezag.", "Je spreekt Nederlands op niveau C1."]
+  },
+  {
+    key: "kinderbeg", title: "Kinderbegeleider", cat: "onderwijs", sectors: ["onderwijs"],
+    kw: ["kinderbegeleider", "kinderopvang", "kinderen", "baby", "creche", "onderwijs"],
+    sal: [2300, 2700], pc: "PC 331", edu: "secundair", exp: 0, regime: ["deeltijds", "voltijds"], contract: ["vast"],
+    remote: "geen", shifts: false, weekend: false, knelpunt: true, tags: ["mensen", "creatief"],
+    ben: ["eco", "hosp", "fiets", "extraverlof"],
+    intro: "Je zorgt voor een groep van acht kinderen tussen 0 en 3 jaar, samen met een vaste collega. Opvang open van 7 tot 18.30 uur, nooit in het weekend.",
+    tasks: ["Je verzorgt baby's en peuters: eten, slapen, verschonen.", "Je organiseert spelactiviteiten.", "Je volgt de ontwikkeling van elk kind op.", "Je houdt een warm contact met ouders."],
+    profile: ["Attest of diploma kinderbegeleider.", "Je bent geduldig en creatief.", "Je spreekt goed Nederlands.", "Starters krijgen een mentor."]
+  },
+  {
+    key: "boekhouder", title: "Boekhouder", cat: "finance", sectors: ["finance", "admin", "productie"],
+    kw: ["boekhouder", "boekhouding", "accountancy", "comptable", "finance", "btw"],
+    sal: [2900, 3800], pc: "PC 200", edu: "bachelor", exp: 2, regime: ["voltijds", "deeltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: true, tags: ["cijfers", "analytisch"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "laptop", "thuiswerkverg", "mobi"],
+    intro: "Je beheert een eigen portefeuille van klanten en bent hun vaste aanspreekpunt voor alles wat met cijfers te maken heeft.",
+    tasks: ["Je verwerkt de boekhouding tot en met de jaarafsluiting.", "Je maakt btw-aangiftes en klantenlistings.", "Je bereidt de vennootschapsbelasting voor.", "Je adviseert klanten bij vragen."],
+    profile: ["Bachelor accountancy-fiscaliteit.", "Twee jaar ervaring in een boekhoudkantoor of een finance-afdeling.", "Je werkt nauwkeurig en zelfstandig.", "Kennis van Exact of Octopus is een plus."]
+  },
+  {
+    key: "controller", title: "Financial controller", cat: "finance", sectors: ["finance", "productie"],
+    kw: ["controller", "finance", "financieel", "rapportering", "budget", "analyse"],
+    sal: [4200, 5500], pc: "PC 200", edu: "master", exp: 4, regime: ["voltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: false, tags: ["cijfers", "analytisch"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "wagen", "laptop", "gsm", "dertiende"],
+    intro: "Je rapporteert rechtstreeks aan de CFO en bent de financiële sparringpartner van de operationele teams.",
+    tasks: ["Je maakt de maand- en kwartaalrapportering.", "Je stelt mee het budget en de forecasts op.", "Je analyseert afwijkingen en stelt acties voor.", "Je verbetert processen en controles."],
+    profile: ["Master economie of handelsingenieur.", "Vier jaar ervaring in controlling of audit.", "Sterk in Excel en ERP-systemen.", "Vlot in Nederlands, Frans en Engels."]
+  },
+  {
+    key: "payroll", title: "Payroll consultant", cat: "admin", sectors: ["admin", "finance"],
+    kw: ["payroll", "loonadministratie", "sociaal secretariaat", "hr", "personeelsadministratie"],
+    sal: [2800, 3600], pc: "PC 200", edu: "bachelor", exp: 0, regime: ["voltijds", "deeltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: true, tags: ["cijfers", "mensen"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "laptop", "thuiswerkverg", "opleiding"],
+    intro: "Je verzorgt de loonadministratie van een vaste groep klanten. Starters volgen eerst een interne opleiding van zes weken.",
+    tasks: ["Je berekent lonen en controleert prestaties.", "Je doet Dimona- en DmfA-aangiftes.", "Je beantwoordt vragen over sociale wetgeving.", "Je adviseert klanten over paritaire comités en premies."],
+    profile: ["Bachelor HR, rechtspraktijk of gelijkwaardig.", "Interesse in sociale wetgeving.", "Je werkt nauwkeurig en klantgericht.", "Basiskennis Frans."]
+  },
+  {
+    key: "hrbp", title: "HR business partner", cat: "admin", sectors: ["productie", "zorg", "logistiek", "ict"],
+    kw: ["hr", "human resources", "personeel", "rekrutering", "people"],
+    sal: [3800, 4800], pc: "PC 200", edu: "master", exp: 4, regime: ["voltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: false, tags: ["mensen"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "wagen", "laptop", "gsm"],
+    intro: "Je ondersteunt leidinggevenden in alles wat met mensen te maken heeft: van rekrutering tot moeilijke gesprekken.",
+    tasks: ["Je adviseert het management over HR-beleid.", "Je begeleidt rekrutering en onboarding.", "Je volgt verzuim en welzijn op.", "Je overlegt met de vakbondsafvaardiging."],
+    profile: ["Master HR, psychologie of rechten.", "Vier jaar ervaring als HR-generalist.", "Je bent diplomatisch en stevig tegelijk.", "Kennis van Belgisch arbeidsrecht."]
+  },
+  {
+    key: "admin", title: "Administratief medewerker", cat: "admin", sectors: ["admin", "zorg", "logistiek", "bouw", "techniek"],
+    kw: ["administratie", "bediende", "onthaal", "secretariaat", "office", "administratief"],
+    sal: [2400, 2900], pc: "PC 200", edu: "secundair", exp: 0, regime: ["deeltijds", "voltijds"], contract: ["vast", "tijdelijk", "interim"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: false, tags: ["mensen"],
+    ben: ["maaltijd", "eco", "hosp", "vervoer"],
+    intro: "Je zorgt dat de administratie vlot loopt en bent het eerste gezicht voor bezoekers en bellers.",
+    tasks: ["Je verwerkt facturen en bestellingen.", "Je beheert agenda's en plant afspraken.", "Je beantwoordt telefoon en e-mails.", "Je houdt dossiers bij."],
+    profile: ["Diploma secundair onderwijs.", "Vlot met Word, Excel en Outlook.", "Je bent georganiseerd en vriendelijk.", "Kennis van Frans is een plus."]
+  },
+  {
+    key: "verkoper", title: "Winkelverkoper", cat: "sales", sectors: ["sales"],
+    kw: ["verkoper", "winkel", "retail", "kassa", "verkoop", "winkelbediende"],
+    sal: [2200, 2600], pc: "PC 311", edu: "geen", exp: 0, regime: ["deeltijds", "voltijds"], contract: ["vast", "studentenjob", "flexi-job"],
+    remote: "geen", shifts: false, weekend: true, knelpunt: false, tags: ["mensen"],
+    ben: ["maaltijd", "eco", "fiets"],
+    intro: "Je helpt klanten in onze winkel met advies over tuin, verf en gereedschap. Zaterdagwerk hoort erbij, zondag is de winkel dicht.",
+    tasks: ["Je adviseert klanten en zoekt mee naar oplossingen.", "Je vult rekken aan en zorgt voor een nette winkel.", "Je bedient de kassa.", "Je neemt bestellingen op."],
+    profile: ["Geen ervaring nodig.", "Je bent sociaal en doe-het-zelver in hart en nieren.", "Je werkt op zaterdag.", "Studenten en flexi-jobbers welkom voor weekendwerk."]
+  },
+  {
+    key: "accountmgr", title: "Account manager B2B", cat: "sales", sectors: ["sales", "ict", "logistiek", "techniek"],
+    kw: ["account manager", "verkoper", "sales", "commercieel", "vertegenwoordiger", "b2b"],
+    sal: [3200, 4200], pc: "PC 200", edu: "bachelor", exp: 2, regime: ["voltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: false, tags: ["mensen"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "wagen", "gsm", "laptop"],
+    intro: "Je bouwt langdurige relaties op met klanten en vindt nieuwe klanten in je regio. Naast je vast loon krijg je een variabele bonus.",
+    tasks: ["Je bezoekt klanten en prospecten.", "Je maakt offertes en onderhandelt over contracten.", "Je volgt je pipeline op in het CRM.", "Je stemt af met de interne teams."],
+    profile: ["Bachelor marketing of gelijkwaardig.", "Twee jaar commerciële ervaring.", "Je bent overtuigend en betrouwbaar.", "Tweetalig Nederlands-Frans."]
+  },
+  {
+    key: "marketing", title: "Digital marketeer", cat: "sales", sectors: ["sales", "ict", "horeca"],
+    kw: ["marketing", "marketeer", "social media", "content", "communicatie", "seo"],
+    sal: [3000, 3800], pc: "PC 200", edu: "bachelor", exp: 1, regime: ["voltijds", "deeltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: false, tags: ["creatief", "analytisch"],
+    ben: ["maaltijd", "eco", "hosp", "laptop", "thuiswerkverg", "opleiding"],
+    intro: "Je zet campagnes op die echt resultaat opleveren, en je meet alles.",
+    tasks: ["Je plant en maakt content voor sociale media en nieuwsbrieven.", "Je beheert advertentiecampagnes.", "Je optimaliseert de website voor zoekmachines.", "Je rapporteert over resultaten."],
+    profile: ["Bachelor communicatie of marketing.", "Een jaar ervaring met online campagnes.", "Je schrijft vlot en creatief.", "Je kent Google Analytics."]
+  },
+  {
+    key: "kok", title: "Kok", cat: "horeca", sectors: ["horeca"],
+    kw: ["kok", "chef", "keuken", "horeca", "cuisinier", "koken"],
+    sal: [2400, 3000], pc: "PC 302", edu: "secundair", exp: 1, regime: ["voltijds", "deeltijds"], contract: ["vast", "flexi-job"],
+    remote: "geen", shifts: true, weekend: true, knelpunt: true, tags: ["handen", "creatief"],
+    ben: ["maaltijd", "eco", "hosp", "extraverlof"],
+    intro: "Je kookt met verse, lokale producten in een keuken met zes collega's. Gesloten op maandag en dinsdag.",
+    tasks: ["Je bereidt gerechten à la minute.", "Je doet de mise-en-place.", "Je volgt HACCP-normen op.", "Je denkt mee over het seizoensmenu."],
+    profile: ["Diploma hotelschool of ervaring in een professionele keuken.", "Je werkt snel en proper.", "Bereid om 's avonds en in het weekend te werken.", "Je bent een teamspeler."]
+  },
+  {
+    key: "receptie", title: "Receptionist hotel", cat: "horeca", sectors: ["horeca"],
+    kw: ["receptionist", "receptie", "hotel", "onthaal", "front office", "horeca", "toerisme"],
+    sal: [2300, 2700], pc: "PC 302", edu: "secundair", exp: 0, regime: ["voltijds", "deeltijds"], contract: ["vast", "studentenjob"],
+    remote: "geen", shifts: true, weekend: true, knelpunt: false, tags: ["mensen"],
+    ben: ["maaltijd", "eco", "hosp", "fiets"],
+    intro: "Je verwelkomt gasten uit binnen- en buitenland in een hotel met zicht op zee.",
+    tasks: ["Je doet check-ins en check-outs.", "Je beheert reservaties.", "Je geeft tips over de streek.", "Je lost klachten vriendelijk op."],
+    profile: ["Diploma toerisme of hotel is een plus.", "Je spreekt Nederlands, Frans en Engels; Duits is een plus.", "Je werkt in vroege en late diensten.", "Je bent gastvrij."]
+  },
+  {
+    key: "operator", title: "Productieoperator", cat: "productie", sectors: ["productie", "horeca"],
+    kw: ["operator", "productie", "productiemedewerker", "machine", "lijnoperator", "fabriek"],
+    sal: [2500, 3100], pc: "PC 116", edu: "secundair", exp: 0, regime: ["voltijds"], contract: ["interim", "vast"],
+    remote: "geen", shifts: true, weekend: false, knelpunt: false, tags: ["handen"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "ploegpremie", "dertiende", "vervoer"],
+    intro: "Je bedient een productielijn in een drie-ploegensysteem. Je krijgt een opleiding van vier weken naast een ervaren collega.",
+    tasks: ["Je stuurt de productielijn aan via een computerscherm.", "Je voert kwaliteitscontroles uit.", "Je verhelpt kleine storingen.", "Je volgt strikt de veiligheidsvoorschriften."],
+    profile: ["Technisch diploma secundair of ervaring in productie.", "Bereid om in drie ploegen te werken.", "Je bent verantwoordelijk en alert.", "Basiskennis Nederlands."]
+  },
+  {
+    key: "qa", title: "Quality assurance specialist", cat: "productie", sectors: ["productie"],
+    kw: ["kwaliteit", "quality", "qa", "gmp", "farma", "audit"],
+    sal: [3500, 4500], pc: "PC 207", edu: "master", exp: 2, regime: ["voltijds"], contract: ["vast"],
+    remote: "hybride", shifts: false, weekend: false, knelpunt: false, tags: ["analytisch"],
+    ben: ["maaltijd", "eco", "hosp", "groep", "laptop", "dertiende", "opleiding"],
+    intro: "Je bewaakt dat elk product voldoet aan de strengste kwaliteitsnormen.",
+    tasks: ["Je beoordeelt afwijkingen en CAPA's.", "Je bereidt audits voor en begeleidt ze.", "Je schrijft en herziet procedures.", "Je traint collega's in GMP."],
+    profile: ["Master in de wetenschappen of farmacie.", "Twee jaar ervaring in QA.", "Je bent nauwkeurig en kritisch.", "Frans en Engels zijn de werktalen."]
+  }
+];
+
+/* Deterministische generator: elke rol wordt bij 2-4 passende bedrijven geplaatst. */
+JW.buildJobs = function () {
+  let seed = 20261007;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+  const cityBy = Object.fromEntries(JW.CITIES.map((c) => [c.name, c]));
+  const catLabel = Object.fromEntries(JW.CATEGORIES.map((c) => [c.id, c.label]));
+  const sectorWord = { ict: "de IT-sector", finance: "de financiële sector", zorg: "zorg", onderwijs: "onderwijs", logistiek: "logistiek", productie: "de productie", bouw: "de bouw", techniek: "de technische dienst", horeca: "de horeca", sales: "retail", admin: "dienstverlening" };
+  const jobs = [];
+  let n = 400;
+
+  JW.ROLES.forEach((role) => {
+    const companies = JW.COMPANIES.filter((c) => role.sectors.includes(c.sector));
+    const shuffled = companies.slice().sort(() => rnd() - 0.5);
+    const count = Math.min(shuffled.length, 2 + Math.floor(rnd() * 3));
+    shuffled.slice(0, count).forEach((co) => {
+      const city = cityBy[co.city];
+      const wallonia = city.region === "Wallonië";
+      const brussels = city.region === "Brussel";
+      const east = co.city === "Eupen";
+      let langs = ["NL"];
+      if (wallonia) langs = ["FR"];
+      if (east) langs = ["DE", "FR"];
+      if (brussels) langs = ["NL", "FR"];
+      if (/Frans/.test(role.profile.join(" ")) && !langs.includes("FR") && rnd() > 0.4) langs.push("FR");
+      if (/Engels/.test(role.profile.join(" ")) && rnd() > 0.5) langs.push("EN");
+      const step = 50;
+      const min = Math.round((role.sal[0] + (rnd() - 0.5) * 200) / step) * step;
+      const max = Math.round((role.sal[1] + (rnd() - 0.5) * 200) / step) * step;
+      const regime = rnd() > 0.5 ? role.regime[0] : pick(role.regime);
+      const contract = pick(role.contract);
+      const ben = role.ben.filter(() => rnd() > 0.2);
+      const daysAgo = Math.floor(rnd() * 29);
+      const views = 40 + Math.floor(rnd() * 900);
+      n += 1 + Math.floor(rnd() * 37);
+      jobs.push({
+        id: "jw" + n,
+        ref: "JW-2026-" + String(n).padStart(4, "0"),
+        role: role.key,
+        title: role.title,
+        cat: role.cat,
+        catLabel: catLabel[role.cat],
+        company: co,
+        city: city.name,
+        pc: city.pc,
+        prov: city.prov,
+        region: city.region,
+        lat: city.lat,
+        lng: city.lng,
+        salMin: Math.min(min, max - 200),
+        salMax: max,
+        paritair: role.pc,
+        edu: role.edu,
+        exp: role.exp,
+        regime,
+        hours: regime === "voltijds" ? (role.pc === "PC 330" ? "38 u/week" : "38 u/week") : pick(["19 u/week (halftijds)", "30,4 u/week (4/5)", "24 u/week"]),
+        contract,
+        remote: role.remote,
+        shifts: role.shifts,
+        weekend: role.weekend,
+        knelpunt: role.knelpunt,
+        tags: role.tags,
+        kw: role.kw,
+        langs: Array.from(new Set(langs)),
+        benefits: ben,
+        daysAgo,
+        views,
+        intro: role.intro.replace("{sector}", sectorWord[co.sector] || "het team"),
+        tasks: role.tasks,
+        profile: role.profile,
+        start: pick(["Zo snel mogelijk", "In overleg", "1 november 2026", "1 december 2026", "Januari 2027"])
+      });
+    });
+  });
+  return jobs;
+};
+
+JW.JOBS = JW.buildJobs();
+</script>
+<script>
+/* Jobwijs prototype — interpretatie van een vrije zoekvraag.
+   Dit is een regelgebaseerde simulatie die volledig in de browser draait.
+   In een echte productversie vervang je JW.parsePrompt door een call naar een
+   taalmodel dat dezelfde criteria-structuur teruggeeft. */
+
+window.JW = window.JW || {};
+
+JW.norm = function (s) {
+  return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+};
+
+JW.distanceKm = function (a, b) {
+  const R = 6371, toR = (d) => (d * Math.PI) / 180;
+  const dLat = toR(b.lat - a.lat), dLng = toR(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+};
+
+JW.CAT_TERMS = {
+  ict: ["it", "ict", "informatica", "developer", "ontwikkelaar", "programmeur", "programmeren", "software", "data", "digitaal", "computer", "helpdesk", "servicedesk", "web", "full-stack", "frontend", "backend"],
+  zorg: ["zorg", "verpleeg", "verpleging", "verpleegkundige", "ziekenhuis", "ouderen", "rusthuis", "woonzorg", "zorgkundige", "labo", "medisch", "patienten", "thuisverpleging"],
+  logistiek: ["logistiek", "magazijn", "transport", "chauffeur", "vrachtwagen", "heftruck", "orderpicker", "planner"],
+  techniek: ["technieker", "technisch", "techniek", "elektricien", "elektriciteit", "onderhoud", "mechanica", "warmtepomp", "installateur", "energie"],
+  bouw: ["bouw", "werf", "aannemer", "tuin", "tuinaanleg", "tuinman", "hovenier", "schrijnwerker", "hout", "timmerman", "werfleider"],
+  onderwijs: ["onderwijs", "leerkracht", "leraar", "school", "lesgeven", "lesgever", "kinderopvang", "kinderen", "kinderbegeleider", "baby"],
+  finance: ["boekhoud", "boekhouding", "boekhouder", "finance", "financieel", "financiele", "financien", "accountancy", "controller", "fiscaliteit"],
+  sales: ["verkoop", "verkoper", "sales", "marketing", "marketeer", "winkel", "retail", "commercieel", "account manager"],
+  admin: ["administratie", "administratief", "hr", "human resources", "personeel", "payroll", "loonadministratie", "bediende", "secretariaat", "onthaal"],
+  horeca: ["horeca", "kok", "keuken", "koken", "hotel", "restaurant", "bakkerij", "voeding", "receptionist"],
+  productie: ["productie", "operator", "fabriek", "industrie", "kwaliteit", "farma", "chemie"]
+};
+
+const EXACT_TERMS = ["school", "hout", "data", "web", "tuin", "kinderen", "energie", "zorg", "hotel", "keuken"];
+JW.termRegex = function (term) {
+  if (EXACT_TERMS.includes(term)) return new RegExp("(^|[^a-z0-9])" + term + "($|[^a-z0-9])");
+  const esc = term.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&");
+  // korte termen exact, langere als woordbegin (verpleeg → verpleegkundige)
+  return term.length <= 3 ? new RegExp("(^|[^a-z0-9])" + esc + "($|[^a-z0-9])") : new RegExp("(^|[^a-z0-9])" + esc);
+};
+
+JW.jobHaystack = function (job) {
+  if (!job._hay) job._hay = JW.norm([job.title, job.kw.join(" "), job.catLabel].join(" "));
+  return job._hay;
+};
+
+const LANGS = { nederlands: "NL", frans: "FR", engels: "EN", duits: "DE" };
+const LANG_LABEL = { NL: "Nederlands", FR: "Frans", EN: "Engels", DE: "Duits" };
+const EDU_RANK = { geen: 0, secundair: 1, bachelor: 2, master: 3 };
+JW.LANG_LABEL = LANG_LABEL;
+
+/* Zoek plaatsnamen, provincies en regio's in genormaliseerde tekst. */
+JW.findPlaces = function (t) {
+  const places = [];
+  const used = [];
+  const add = (p, idx, len) => { if (used.some(([a, b]) => idx < b && idx + len > a)) return; used.push([idx, idx + len]); places.push(p); };
+  const provs = [
+    ["west-vlaanderen", "West-Vlaanderen"], ["west vlaanderen", "West-Vlaanderen"], ["oost-vlaanderen", "Oost-Vlaanderen"], ["oost vlaanderen", "Oost-Vlaanderen"],
+    ["vlaams-brabant", "Vlaams-Brabant"], ["vlaams brabant", "Vlaams-Brabant"], ["waals-brabant", "Waals-Brabant"], ["waals brabant", "Waals-Brabant"],
+    ["provincie antwerpen", "Antwerpen"], ["limburg", "Limburg"], ["henegouwen", "Henegouwen"], ["provincie luik", "Luik"], ["provincie namen", "Namen"], ["provincie luxemburg", "Luxemburg"], ["kempen", "Antwerpen"]
+  ];
+  provs.forEach(([k, v]) => { const i = t.indexOf(k); if (i >= 0) add({ type: "prov", value: v, label: "provincie " + v }, i, k.length); });
+  const regions = [["vlaanderen", "Vlaanderen"], ["wallonie", "Wallonië"], ["vlaams gewest", "Vlaanderen"]];
+  regions.forEach(([k, v]) => {
+    const m = new RegExp("(^|[^a-z-])" + k).exec(t);
+    if (m) add({ type: "region", value: v, label: v }, m.index + m[1].length, k.length);
+  });
+  JW.CITIES.forEach((c) => {
+    [c.name, ...c.alias].forEach((n) => {
+      const k = JW.norm(n);
+      const m = new RegExp("(^|[^a-z0-9-])" + k.replace(/[-]/g, "[- ]") + "($|[^a-z0-9])").exec(t);
+      if (m) add({ type: "city", value: c.name, city: c, label: c.name }, m.index + m[1].length, k.length);
+    });
+    const m = new RegExp("(^|\\D)" + c.pc + "(\\D|$)").exec(t);
+    if (m) add({ type: "city", value: c.name, city: c, label: c.name + " (" + c.pc + ")" }, m.index + m[1].length, 4);
+  });
+  return places;
+};
+
+JW.placeMatch = function (job, place, radius) {
+  if (place.type === "city") {
+    const d = JW.distanceKm(place.city, job);
+    return { ok: d <= radius, d };
+  }
+  if (place.type === "prov") return { ok: job.prov === place.value };
+  if (place.type === "region") return { ok: job.region === place.value };
+  return { ok: false };
+};
+
+JW.parsePrompt = function (text) {
+  const t = " " + JW.norm(text) + " ";
+  const C = [];
+  const neg = (word) => new RegExp("(geen|zonder|niet|liever geen|weinig|nooit)\\s+(\\S+\\s+){0,2}" + word).test(t);
+
+  /* Functie / sector */
+  const cats = new Set();
+  const terms = new Set();
+  Object.entries(JW.CAT_TERMS).forEach(([cat, list]) => {
+    list.forEach((term) => {
+      if (JW.termRegex(term).test(t) && !neg(term)) { cats.add(cat); terms.add(term); }
+    });
+  });
+  // rolspecifieke trefwoorden die niet in de sectorlijsten staan
+  JW.ROLES.forEach((r) => r.kw.forEach((k) => {
+    const nk = JW.norm(k);
+    if (nk.length > 3 && JW.termRegex(nk).test(t) && !neg(nk)) { cats.add(r.cat); terms.add(nk); }
+  }));
+  if (cats.size) {
+    const catLabels = [...cats].map((c) => JW.CATEGORIES.find((x) => x.id === c).label);
+    const termList = [...terms];
+    C.push({
+      id: "functie", group: "Functie", label: catLabels.join(" of "), weight: 4, hard: true,
+      test: (j) => {
+        const hay = JW.jobHaystack(j);
+        if (termList.some((term) => JW.termRegex(term).test(hay))) return 1;
+        return cats.has(j.cat) ? 0.6 : 0;
+      },
+      why: (j, s) => (s === 1 ? "Functie past bij “" + termList.filter((term) => JW.termRegex(term).test(JW.jobHaystack(j)))[0] + "”" : "Zelfde sector: " + j.catLabel)
+    });
+  }
+
+  /* Locatie */
+  const places = JW.findPlaces(t);
+  let radius = 25, radiusSet = false;
+  const km = /(\d{1,3})\s*(km|kilometer)/.exec(t);
+  const min = /(\d{1,3})\s*(min|minuten)/.exec(t);
+  if (km) { radius = +km[1]; radiusSet = true; } else if (min) { radius = Math.round(+min[1] * 0.9); radiusSet = true; }
+  if (/(in|op) de stad|in het centrum/.test(t) && !radiusSet) radius = 10;
+  if (places.length) {
+    const hasCity = places.some((p) => p.type === "city");
+    C.push({
+      id: "waar", group: "Waar", label: places.map((p) => p.label).join(" of ") + (hasCity ? " + " + radius + " km" : ""), weight: 3, hard: true,
+      places, radius,
+      test: (j) => (places.some((p) => JW.placeMatch(j, p, radius).ok) ? 1 : 0),
+      why: (j) => {
+        const city = places.filter((p) => p.type === "city").sort((a, b) => JW.distanceKm(a.city, j) - JW.distanceKm(b.city, j))[0];
+        if (city) { const d = Math.round(JW.distanceKm(city.city, j)); return d < 3 ? "In " + j.city : j.city + " ligt op " + d + " km van " + city.value; }
+        return "In " + (j.prov === places[0].value ? "provincie " + j.prov : j.region);
+      }
+    });
+  }
+
+  /* Regime */
+  if (/deeltijd|halftijd|parttime|part-time|4\/5|vier vijfde|80 ?%|minder uren/.test(t)) {
+    C.push({ id: "regime", group: "Regime", label: "Deeltijds", weight: 2, test: (j) => (j.regime === "deeltijds" ? 1 : 0), why: (j, s) => (s ? "Deeltijds (" + j.hours + ")" : "Voltijdse job") });
+  } else if (/voltijd|fulltime|full-time|full time/.test(t)) {
+    C.push({ id: "regime", group: "Regime", label: "Voltijds", weight: 2, test: (j) => (j.regime === "voltijds" ? 1 : 0), why: (j, s) => (s ? "Voltijds" : "Deeltijdse job") });
+  }
+
+  /* Contract */
+  const contracts = [];
+  if (/vast(e)? (contract|job|baan|werk|aanstelling|betrekking)|onbepaalde duur|\bvast\b|zekerheid/.test(t)) contracts.push("vast");
+  if (/tijdelijk|bepaalde duur|vervanging/.test(t)) contracts.push("tijdelijk");
+  if (/interim|uitzend/.test(t)) contracts.push("interim");
+  if (/freelance|zelfstandig|freelancer/.test(t) && !neg("freelance") && !neg("zelfstandig")) contracts.push("freelance");
+  if (/student/.test(t)) contracts.push("studentenjob");
+  if (/flexi/.test(t)) contracts.push("flexi-job");
+  if (contracts.length) {
+    C.push({ id: "contract", group: "Contract", label: contracts.map(JW.contractLabel).join(" of "), weight: 2, test: (j) => (contracts.includes(j.contract) ? 1 : 0), why: (j, s) => (s ? JW.contractLabel(j.contract) : "Contract: " + JW.contractLabel(j.contract).toLowerCase()) });
+  }
+
+  /* Thuiswerk */
+  if (/volledig (van )?thuis|full remote|fully remote|100 ?% (remote|thuis)|volledig remote|enkel thuiswerk/.test(t)) {
+    C.push({ id: "remote", group: "Thuiswerk", label: "Volledig remote", weight: 2, test: (j) => (j.remote === "remote" ? 1 : j.remote === "hybride" ? 0.4 : 0), why: (j, s) => (s === 1 ? "Volledig thuiswerk mogelijk" : s ? "Deels thuiswerk" : "Geen thuiswerk") });
+  } else if (/thuiswerk|telewerk|remote|van thuis|hybride|thuis werken/.test(t) && !neg("thuiswerk")) {
+    C.push({ id: "remote", group: "Thuiswerk", label: "Thuiswerk mogelijk", weight: 2, test: (j) => (j.remote !== "geen" ? 1 : 0), why: (j, s) => (s ? (j.remote === "remote" ? "Volledig thuiswerk mogelijk" : "Hybride: deels thuiswerk") : "Geen thuiswerk") });
+  }
+
+  /* Loon */
+  let sal = null;
+  const salRe = /(?:€|eur|euro)\s*(\d[\d.,]*)\s*(k)?|(\d[\d.,]*)\s*(k)?\s*(?:€|eur|euro)|(?:minstens|minimum|min\.?|meer dan|vanaf|boven|>)\s*(\d[\d.,]*)\s*(k)?/;
+  const salAll = new RegExp(salRe.source, "g");
+  let sm;
+  while (!sal && (sm = salAll.exec(t))) {
+    const raw = sm[1] || sm[3] || sm[5];
+    const k = sm[2] || sm[4] || sm[6];
+    let v = parseFloat(raw.replace(/\.(?=\d{3})/g, "").replace(",", "."));
+    if (k) v *= 1000;
+    if (v >= 1000 && v <= 20000) sal = Math.round(v);
+  }
+  if (sal) {
+    const net = /netto/.test(t);
+    C.push({
+      id: "loon", group: "Loon", label: "Minstens € " + sal.toLocaleString("nl-BE") + (net ? " netto" : " bruto"), weight: 2,
+      test: (j) => { const target = net ? sal * 1.6 : sal; return j.salMax >= target ? (j.salMin >= target ? 1 : 0.7) : 0; },
+      why: (j, s) => (s ? "Loon tot € " + j.salMax.toLocaleString("nl-BE") + " bruto" : "Loon tot € " + j.salMax.toLocaleString("nl-BE") + " bruto, lager dan gevraagd")
+    });
+  }
+
+  /* Talen */
+  const avoid = [], want = [];
+  let spoken = null;
+  Object.entries(LANGS).forEach(([w, code]) => {
+    if (!new RegExp(w).test(t)) return;
+    if (neg(w)) avoid.push(code);
+  });
+  const part = /ik spreek ([a-z, ]+?)(?=[.;!?]|\bmaar\b|\ben (ik|zoek|wil)\b|\bzoek|\bwil|$)/.exec(t);
+  if (part) {
+    spoken = Object.entries(LANGS).filter(([w, c]) => part[1].includes(w) && !avoid.includes(c)).map(([, c]) => c);
+    if (!spoken.length) spoken = null;
+  }
+  if (/tweetalig|bilingue/.test(t)) want.push("NL", "FR");
+  Object.entries(LANGS).forEach(([w, code]) => {
+    if (new RegExp("(met|in het|kennis van|gebruik van|mijn) " + w).test(t) && !avoid.includes(code) && !want.includes(code)) want.push(code);
+  });
+  if (avoid.length) {
+    C.push({ id: "taal-niet", group: "Taal", label: "Zonder " + avoid.map((c) => LANG_LABEL[c]).join(", "), weight: 2, test: (j) => (j.langs.some((l) => avoid.includes(l)) ? 0 : 1), why: (j, s) => (s ? "Geen " + avoid.map((c) => LANG_LABEL[c]).join("/") + " vereist" : LANG_LABEL[avoid.find((a) => j.langs.includes(a))] + " is vereist") });
+  }
+  if (spoken) {
+    C.push({ id: "taal-spreek", group: "Taal", label: "Jij spreekt " + spoken.map((c) => LANG_LABEL[c]).join(", "), weight: 2, test: (j) => (j.langs.every((l) => spoken.includes(l)) ? 1 : 0), why: (j, s) => (s ? "Gevraagde talen: " + j.langs.map((l) => LANG_LABEL[l]).join(", ") : "Vraagt ook " + j.langs.filter((l) => !spoken.includes(l)).map((l) => LANG_LABEL[l]).join(", ")) });
+  }
+  if (want.length) {
+    const w = Array.from(new Set(want));
+    C.push({ id: "taal-met", group: "Taal", label: "Met " + w.map((c) => LANG_LABEL[c]).join(" en "), weight: 1, test: (j) => w.filter((l) => j.langs.includes(l)).length / w.length, why: (j, s) => (s === 1 ? "Je werkt in het " + w.map((c) => LANG_LABEL[c]).join(" en ") : "Talen: " + j.langs.map((l) => LANG_LABEL[l]).join(", ")) });
+  }
+
+  /* Ervaring */
+  const yrs = /(\d{1,2})\s*jaar (werk)?ervaring/.exec(t);
+  if (/schoolverlater|pas afgestudeerd|net afgestudeerd|starter|geen ervaring|zonder ervaring|weinig ervaring|eerste job|herintreder|zij-instromer/.test(t)) {
+    C.push({ id: "ervaring", group: "Ervaring", label: "Starter, geen ervaring", weight: 2, test: (j) => (j.exp === 0 ? 1 : j.exp === 1 ? 0.5 : 0), why: (j, s) => (s === 1 ? "Geen ervaring vereist" : j.exp + " jaar ervaring gevraagd") });
+  } else if (yrs) {
+    const y = +yrs[1];
+    C.push({ id: "ervaring", group: "Ervaring", label: y + " jaar ervaring", weight: 2, test: (j) => (j.exp <= y ? 1 : j.exp - y <= 1 ? 0.5 : 0), why: (j, s) => (s === 1 ? "Ervaring past (" + (j.exp ? j.exp + "+ jaar gevraagd" : "geen minimum") + ")" : j.exp + " jaar ervaring gevraagd") });
+  } else if (/\bjunior\b/.test(t)) {
+    C.push({ id: "ervaring", group: "Ervaring", label: "Junior", weight: 2, test: (j) => (j.exp <= 1 ? 1 : j.exp <= 2 ? 0.5 : 0), why: (j, s) => (s === 1 ? "Geschikt voor juniors" : j.exp + " jaar ervaring gevraagd") });
+  } else if (/\bsenior\b|veel ervaring|ervaren /.test(t)) {
+    C.push({ id: "ervaring", group: "Ervaring", label: "Senior", weight: 2, test: (j) => (j.exp >= 4 ? 1 : j.exp >= 2 ? 0.5 : 0), why: (j, s) => (s === 1 ? "Senior functie" : "Eerder een junior/medior functie") });
+  }
+
+  /* Diploma */
+  let edu = null;
+  if (/zonder diploma|geen diploma|laaggeschoold/.test(t)) edu = "geen";
+  else if (/secundair|middelbaar|\b(a2|tso|bso)\b/.test(t)) edu = "secundair";
+  else if (/\bbachelor\b|hogeschool|graduaat|gegradueerde/.test(t)) edu = "bachelor";
+  else if (/\bmaster\b|universiteit|universitair/.test(t)) edu = "master";
+  if (edu) {
+    const label = { geen: "Geen diploma vereist", secundair: "Diploma secundair", bachelor: "Bachelor", master: "Master" }[edu];
+    C.push({ id: "diploma", group: "Diploma", label, weight: 1, test: (j) => (EDU_RANK[j.edu] <= EDU_RANK[edu] ? 1 : 0), why: (j, s) => (s ? (j.edu === "geen" ? "Geen diploma vereist" : "Diploma " + j.edu + " volstaat") : "Vraagt een " + j.edu + "diploma") });
+  }
+
+  /* Uren */
+  if (/geen ploeg|zonder ploeg|geen ploegenwerk|geen shift|dagwerk|dagjob|overdag|normale uren|kantooruren|geen nacht|9 tot 5|daguren/.test(t)) {
+    C.push({ id: "ploegen", group: "Uren", label: "Geen ploegenwerk", weight: 2, test: (j) => (j.shifts ? 0 : 1), why: (j, s) => (s ? "Dagwerk, geen ploegen" : "Werken in ploegen") });
+  }
+  if (/geen weekend|zonder weekend|weekends? vrij|nooit (in het )?weekend|niet in het weekend/.test(t)) {
+    C.push({ id: "weekend", group: "Uren", label: "Geen weekendwerk", weight: 2, test: (j) => (j.weekend ? 0 : 1), why: (j, s) => (s ? "Weekends vrij" : "Af en toe weekendwerk") });
+  }
+
+  /* Extralegale voordelen */
+  const benefitMap = [
+    ["wagen", /bedrijfswagen|firmawagen|(auto|wagen) van de zaak|bedrijfsauto|company car|leasewagen|salariswagen/],
+    ["maaltijd", /maaltijdcheque/], ["fiets", /fiets/], ["hosp", /hospitalisatie/], ["groep", /groepsverzekering|aanvullend pensioen/],
+    ["mobi", /mobiliteitsbudget/], ["dertiende", /13de maand|dertiende maand/], ["opleiding", /opleiding|bijleren|groeien/]
+  ];
+  benefitMap.forEach(([key, re]) => {
+    if (re.test(t)) C.push({ id: "voordeel-" + key, group: "Voordeel", label: JW.BENEFITS[key], weight: 1, test: (j) => (j.benefits.includes(key) ? 1 : 0), why: (j, s) => (s ? JW.BENEFITS[key] : "Geen " + JW.BENEFITS[key].toLowerCase()) });
+  });
+
+  /* Soort werk */
+  const tagMap = [
+    ["buiten", "Buiten werken", /\bbuiten\b|open lucht|openlucht|niet achter een bureau/],
+    ["mensen", "Met mensen", /met mensen|sociaal|contact met|mensen helpen|helpen van mensen|met klanten/],
+    ["handen", "Praktisch werk", /met (mijn|m'n|de|je) handen|handen uit de mouwen|praktisch|manueel|technisch werk/],
+    ["creatief", "Creatief", /creatie|creatief/],
+    ["cijfers", "Met cijfers", /cijfers|getallen|rekenen/],
+    ["analytisch", "Analytisch", /analytisch|puzzel|problemen oplossen|analyseren/]
+  ];
+  tagMap.forEach(([tag, label, re]) => {
+    if (re.test(t)) C.push({ id: "soort-" + tag, group: "Soort werk", label, weight: 1.5, test: (j) => (j.tags.includes(tag) ? 1 : 0), why: (j, s) => (s ? label + ": past" : label + ": minder") });
+  });
+
+  if (/knelpunt|veel vraag naar|werkzekerheid|toekomst/.test(t)) {
+    C.push({ id: "knelpunt", group: "Toekomst", label: "Knelpuntberoep", weight: 1, test: (j) => (j.knelpunt ? 1 : 0), why: (j, s) => (s ? "Knelpuntberoep: veel vraag naar" : "Geen knelpuntberoep") });
+  }
+  if (/recent|nieuw(e)? vacature|deze week|pas online/.test(t)) {
+    C.push({ id: "recent", group: "Datum", label: "Recent geplaatst", weight: 1, test: (j) => (j.daysAgo <= 7 ? 1 : 0), why: (j, s) => (s ? "Nieuw deze week" : "Al " + j.daysAgo + " dagen online") });
+  }
+
+  return C;
+};
+
+JW.scoreJobs = function (jobs, criteria) {
+  const total = criteria.reduce((a, c) => a + c.weight, 0);
+  return jobs
+    .map((job) => {
+      let got = 0;
+      const hits = [], misses = [];
+      let excluded = false;
+      criteria.forEach((c) => {
+        const s = c.test(job);
+        if (c.hard && s === 0) excluded = true;
+        got += s * c.weight;
+        (s > 0 ? hits : misses).push({ c, s, text: c.why(job, s) });
+      });
+      return { job, excluded, score: total ? got / total : 0, hits, misses };
+    })
+    .filter((r) => !r.excluded);
+};
+
+JW.contractLabel = function (c) {
+  return { vast: "Vast contract", tijdelijk: "Tijdelijk", interim: "Interim", freelance: "Freelance", studentenjob: "Studentenjob", "flexi-job": "Flexi-job" }[c] || c;
+};
+</script>
+<script>
+/* Jobwijs prototype — routing, zoeken en weergave. */
+(function () {
+  "use strict";
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const eur = (n) => "€ " + n.toLocaleString("nl-BE");
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* opslag niet beschikbaar */ } }
+  };
+
+  const JOBS = JW.JOBS;
+  const byId = Object.fromEntries(JOBS.map((j) => [j.id, j]));
+
+  const ICON = {
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7z"/></svg>',
+    bookmark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>',
+    bookmarkFill: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>',
+    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    euro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 6.5A7 7 0 1 0 17 17.5M4 10.5h9M4 13.5h9"/></svg>',
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9H3z"/><path d="M10 20v-5h4v5"/></svg>',
+    flame: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-2 2-5 5-5 8a7 7 0 0 0 7 7z"/></svg>',
+    check: '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    chev: '<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>'
+  };
+
+  const EXAMPLES = [
+    "Ik zoek een deeltijdse job in de zorg rond Gent, liefst zonder weekendwerk",
+    "Junior developer in Antwerpen of Mechelen met thuiswerk en minstens € 3.000 bruto",
+    "Ik ben schoolverlater en wil met mijn handen werken in Limburg, vast contract",
+    "Tweetalige job in Brussel in finance met bedrijfswagen",
+    "Ik spreek geen Frans en wil buiten werken, geen ploegenwerk, binnen 30 km van 9000"
+  ];
+
+  const emptyFilters = () => ({ cat: new Set(), contract: new Set(), regime: new Set(), lang: new Set(), remote: false, knelpunt: false, minSal: 0, posted: 0 });
+
+  const state = {
+    mode: "classic",
+    wat: "", waar: "", radius: 25,
+    prompt: "", removed: new Set(),
+    filters: emptyFilters(),
+    sort: "relevantie",
+    hasSearch: false,
+    saved: new Set(store.get("jw-saved", [])),
+    applied: store.get("jw-applied", {}),
+    visited: new Set(store.get("jw-visited", [])),
+    lastList: [],
+    resultsScroll: 0,
+    lastRoute: ""
+  };
+
+  /* ---------- Hulpjes ---------- */
+  const initials = (name) => name.replace(/&/g, "").split(/\s+/).filter((w) => /^[A-Za-zÀ-ÿ]/.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+  const logo = (co, big) => `<span class="logo${big ? " big" : ""}" style="--h:${co.hue}" aria-hidden="true">${esc(initials(co.name))}</span>`;
+  const postedLabel = (d) => (d === 0 ? "Vandaag" : d === 1 ? "Gisteren" : d + " dagen geleden");
+  const remoteLabel = (r) => ({ remote: "Volledig thuiswerk", hybride: "Hybride thuiswerk", geen: "Op locatie" })[r];
+  const eduLabel = (e) => ({ geen: "Geen diploma vereist", secundair: "Secundair onderwijs", bachelor: "Bachelor", master: "Master" })[e];
+  const expLabel = (x) => (x === 0 ? "Geen ervaring vereist" : x + "+ jaar");
+  const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
+
+  function toast(msg) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { t.hidden = true; }, 2600);
+  }
+
+  function updateSavedCount() { $("#saved-count").textContent = state.saved.size; }
+
+  /* ---------- WAAR herkennen ---------- */
+  function resolveWhere(q) {
+    const n = JW.norm(q);
+    if (!n) return null;
+    if (/^\d{4}$/.test(n)) {
+      const exact = JW.CITIES.find((c) => c.pc === n);
+      if (exact) return { type: "city", city: exact, value: exact.name, label: exact.name + " (" + exact.pc + ")" };
+      const same = JW.CITIES.filter((c) => c.pc[0] === n[0]);
+      if (same.length) {
+        const near = same.slice().sort((a, b) => Math.abs(+a.pc - +n) - Math.abs(+b.pc - +n))[0];
+        return { type: "city", city: near, value: near.name, label: "postcode " + n + " (rond " + near.name + ")" };
+      }
+    }
+    const city = JW.CITIES.find((c) => JW.norm(c.name) === n || c.alias.includes(n) || n === JW.norm(c.name + " (" + c.pc + ")") || n === c.pc + " " + JW.norm(c.name));
+    if (city) return { type: "city", city, value: city.name, label: city.name };
+    const prov = JW.PROVINCES.find((p) => JW.norm(p) === n || JW.norm("provincie " + p) === n);
+    if (prov) return { type: "prov", value: prov, label: "provincie " + prov };
+    const region = JW.REGIONS.find((r) => JW.norm(r) === n);
+    if (region) return region === "Brussel" ? { type: "city", city: JW.CITIES.find((c) => c.name === "Brussel"), value: "Brussel", label: "Brussel" } : { type: "region", value: region, label: region };
+    const starts = JW.CITIES.filter((c) => JW.norm(c.name).startsWith(n));
+    if (starts.length === 1) return { type: "city", city: starts[0], value: starts[0].name, label: starts[0].name };
+    const found = JW.findPlaces(" " + n + " ");
+    if (found.length) return found[0];
+    return { error: true, label: q };
+  }
+
+  /* ---------- Zoeken ---------- */
+  function classicSearch() {
+    const tokens = JW.norm(state.wat).split(/[\s,\/]+/).filter((t) => t.length > 1 && !["en", "of", "de", "het", "een", "in", "job", "jobs", "vacature"].includes(t));
+    const place = resolveWhere(state.waar);
+    const results = [];
+    JOBS.forEach((job) => {
+      let score = 1;
+      if (tokens.length) {
+        const title = JW.norm(job.title);
+        const hay = JW.jobHaystack(job) + " " + JW.norm(job.company.name);
+        let ok = true;
+        tokens.forEach((tok) => {
+          const re = JW.termRegex(tok);
+          const catHit = (JW.CAT_TERMS[job.cat] || []).some((term) => term === tok || (tok.length > 3 && term.startsWith(tok)));
+          if (re.test(title)) score += 3;
+          else if (re.test(hay)) score += 1.5;
+          else if (catHit) score += 0.5;
+          else ok = false;
+        });
+        if (!ok) return;
+      }
+      let dist = null;
+      if (place && !place.error) {
+        if (place.type === "city") {
+          dist = JW.distanceKm(place.city, job);
+          const r = state.radius === 0 ? 3 : state.radius;
+          if (dist > r) return;
+        } else if (!JW.placeMatch(job, place, 0).ok) return;
+      }
+      results.push({ job, score, dist });
+    });
+    return { results, place };
+  }
+
+  function activeCriteria() {
+    return JW.parsePrompt(state.prompt).filter((c) => !state.removed.has(c.id));
+  }
+
+  function promptSearch() {
+    const all = JW.parsePrompt(state.prompt);
+    const crit = all.filter((c) => !state.removed.has(c.id));
+    const scored = JW.scoreJobs(JOBS, crit);
+    const loc = crit.find((c) => c.id === "waar");
+    const cityPlaces = loc ? loc.places.filter((p) => p.type === "city") : [];
+    scored.forEach((r) => { r.dist = cityPlaces.length ? Math.min(...cityPlaces.map((p) => JW.distanceKm(p.city, r.job))) : null; });
+    return { results: crit.length ? scored : scored.map((r) => ({ ...r, score: 0 })), all, crit };
+  }
+
+  function passFilters(job, f, skip) {
+    if (skip !== "cat" && f.cat.size && !f.cat.has(job.cat)) return false;
+    if (skip !== "contract" && f.contract.size && !f.contract.has(job.contract)) return false;
+    if (skip !== "regime" && f.regime.size && !f.regime.has(job.regime)) return false;
+    if (skip !== "lang" && f.lang.size && !job.langs.some((l) => f.lang.has(l))) return false;
+    if (skip !== "remote" && f.remote && job.remote === "geen") return false;
+    if (skip !== "knelpunt" && f.knelpunt && !job.knelpunt) return false;
+    if (skip !== "minSal" && f.minSal && job.salMax < f.minSal) return false;
+    if (skip !== "posted" && f.posted && job.daysAgo > f.posted) return false;
+    return true;
+  }
+
+  function sortResults(list) {
+    const s = state.sort;
+    const by = {
+      relevantie: (a, b) => b.score - a.score || a.job.daysAgo - b.job.daysAgo,
+      datum: (a, b) => a.job.daysAgo - b.job.daysAgo,
+      loon: (a, b) => b.job.salMax - a.job.salMax,
+      afstand: (a, b) => (a.dist ?? 999) - (b.dist ?? 999)
+    }[s];
+    return list.slice().sort(by);
+  }
+
+  /* ---------- Componenten ---------- */
+  function searchPanel(withExamples = true) {
+    const isPrompt = state.mode === "prompt";
+    const cityOptions = JW.CITIES.map((c) => `<option value="${esc(c.name)}">${c.pc} · ${esc(c.prov)}</option>`).join("")
+      + JW.PROVINCES.filter((p) => p !== "Brussel").map((p) => `<option value="Provincie ${esc(p)}"></option>`).join("")
+      + `<option value="Vlaanderen"></option><option value="Wallonië"></option>`;
+    const roleOptions = Array.from(new Set(JW.ROLES.map((r) => r.title))).concat(JW.CATEGORIES.map((c) => c.label)).map((t) => `<option value="${esc(t)}"></option>`).join("");
+    return `
+    <div class="search">
+      <div class="tabs" role="tablist" aria-label="Manier van zoeken">
+        <button class="tab" role="tab" id="tab-classic" aria-controls="classic-form" aria-selected="${!isPrompt}" data-action="mode" data-mode="classic">${ICON.search} Wat &amp; waar</button>
+        <button class="tab" role="tab" id="tab-prompt" aria-controls="prompt-form" aria-selected="${isPrompt}" data-action="mode" data-mode="prompt">${ICON.spark} Beschrijf wat je zoekt <span class="pill hide-sm">nieuw</span></button>
+      </div>
+      <form class="classic-form" id="classic-form" role="tabpanel" aria-labelledby="tab-classic" ${isPrompt ? "hidden" : ""}>
+        <label class="field withicon"><span>Wat</span>${ICON.search}<input id="f-wat" name="wat" list="dl-wat" autocomplete="off" placeholder="Functie, trefwoord of bedrijf" value="${esc(state.wat)}"></label>
+        <label class="field withicon"><span>Waar</span>${ICON.pin}<input id="f-waar" name="waar" list="dl-waar" autocomplete="off" placeholder="Gemeente, postcode of provincie" value="${esc(state.waar)}"></label>
+        <label class="field"><span>Straal</span>
+          <select id="f-radius" name="radius">
+            ${[0, 10, 25, 50, 100].map((r) => `<option value="${r}" ${state.radius === r ? "selected" : ""}>${r === 0 ? "Enkel deze gemeente" : "+ " + r + " km"}</option>`).join("")}
+          </select>
+        </label>
+        <button class="btn primary" type="submit">Zoek jobs</button>
+        <datalist id="dl-wat">${roleOptions}</datalist>
+        <datalist id="dl-waar">${cityOptions}</datalist>
+      </form>
+      <form class="prompt-form" id="prompt-form" role="tabpanel" aria-labelledby="tab-prompt" ${isPrompt ? "" : "hidden"}>
+        <div class="prompt-box">
+          <label for="f-prompt" class="sr-only">Beschrijf in je eigen woorden welke job je zoekt</label>
+          <textarea id="f-prompt" name="prompt" rows="3" placeholder="Bijvoorbeeld: ik zoek een deeltijdse job in de zorg rond Gent, liefst zonder weekendwerk">${esc(state.prompt)}</textarea>
+        </div>
+        <div class="prompt-foot">
+          <p class="hint">Vertel wat je zoekt: functie, regio, uren, contract, loon, talen, ervaring of extralegale voordelen.</p>
+          <button class="btn primary" type="submit">${ICON.spark} Zoek passende jobs</button>
+        </div>
+        <div class="examples" aria-label="Voorbeelden" ${withExamples ? "" : "hidden"}>
+          ${EXAMPLES.slice(0, 3).map((e) => `<button type="button" class="example" data-action="example" data-text="${esc(e)}">${esc(e)}</button>`).join("")}
+        </div>
+      </form>
+    </div>`;
+  }
+
+  function tags(job) {
+    const out = [];
+    out.push(`<span class="tag salary">${eur(job.salMin)} – ${eur(job.salMax)}</span>`);
+    out.push(`<span class="tag">${esc(JW.contractLabel(job.contract))}</span>`);
+    out.push(`<span class="tag">${job.regime === "voltijds" ? "Voltijds" : "Deeltijds"}</span>`);
+    if (job.remote !== "geen") out.push(`<span class="tag remote">${ICON.home}${remoteLabel(job.remote)}</span>`);
+    if (job.knelpunt) out.push(`<span class="tag knelpunt" title="Knelpuntberoep: werkgevers vinden moeilijk kandidaten">${ICON.flame}Knelpuntberoep</span>`);
+    return out.join("");
+  }
+
+  function saveBtn(job) {
+    const on = state.saved.has(job.id);
+    return `<button class="save" type="button" data-action="save" data-id="${job.id}" aria-pressed="${on}" aria-label="${on ? "Verwijder uit bewaarde jobs" : "Bewaar deze job"}" title="${on ? "Bewaard" : "Bewaar"}">${on ? ICON.bookmarkFill : ICON.bookmark}</button>`;
+  }
+
+  function jobCard(r, opts = {}) {
+    const job = r.job;
+    const dist = r.dist != null && r.dist >= 1 ? ` · <span class="mono">${Math.round(r.dist)} km</span>` : "";
+    let match = "";
+    if (opts.match && r.hits) {
+      const pct = Math.round(r.score * 100);
+      const reasons = r.hits.filter((h) => h.s >= 0.6).slice(0, 3).map((h) => `<li class="ok">${esc(h.text)}</li>`)
+        .concat(r.misses.slice(0, 1).map((m) => `<li class="no">${esc(m.text)}</li>`)).join("");
+      match = `<div class="match"><span class="score ${pct < 70 ? "mid" : ""}" title="Hoe goed deze job past bij je vraag">${pct}%</span><ul class="reasons">${reasons}</ul></div>`;
+    }
+    return `
+    <article class="job-card ${state.visited.has(job.id) ? "visited" : ""}">
+      ${logo(job.company)}
+      <div class="job-main">
+        <h3><a href="#job-${job.id}">${esc(job.title)}</a></h3>
+        <p class="job-sub"><strong>${esc(job.company.name)}</strong> · ${esc(job.city)}${dist}</p>
+        <div class="meta">${tags(job)}</div>
+      </div>
+      <div class="job-side">
+        <span class="posted">${postedLabel(job.daysAgo)}</span>
+        ${saveBtn(job)}
+      </div>
+      ${match}
+    </article>`;
+  }
+
+  /* ---------- Pagina's ---------- */
+  function renderHome() {
+    const regionCount = (r) => JOBS.filter((j) => j.region === r).length;
+    const fresh = JOBS.slice().sort((a, b) => a.daysAgo - b.daysAgo).slice(0, 5);
+    return `
+    <section class="band">
+      <div class="wrap">
+        <p class="tally"><span><b>${JOBS.length}</b> vacatures</span><span>Vlaanderen <b>${regionCount("Vlaanderen")}</b></span><span>Brussel <b>${regionCount("Brussel")}</b></span><span>Wallonië <b>${regionCount("Wallonië")}</b></span></p>
+        <h1>Zoek werk op <em>jouw</em> manier.</h1>
+        <p class="lede">Zoek klassiek op functie en plaats, of vertel in je eigen woorden wat je zoekt. Wij zoeken de jobs die het best passen.</p>
+      </div>
+    </section>
+    <div class="wrap"><div class="search-wrap">${searchPanel()}</div></div>
+    <div class="wrap home-sections">
+      <section>
+        <div class="section-head"><h2>Probeer een vraag</h2><span class="muted">Klik om meteen te zoeken</span></div>
+        <div class="prompt-cards">
+          ${EXAMPLES.slice(0, 4).map((e) => `<button class="prompt-card" data-action="run-prompt" data-text="${esc(e)}"><q>${esc(e)}</q><span>Zoek met deze prompt →</span></button>`).join("")}
+        </div>
+      </section>
+      <section>
+        <div class="section-head"><h2>Per sector</h2></div>
+        <div class="cat-grid">
+          ${JW.CATEGORIES.map((c) => `<a href="#resultaten" data-action="cat" data-cat="${c.id}">${esc(c.label)} <span class="mono">${JOBS.filter((j) => j.cat === c.id).length}</span></a>`).join("")}
+        </div>
+      </section>
+      <section>
+        <div class="section-head"><h2>Per regio</h2></div>
+        <div class="region-row">
+          ${JW.REGIONS.map((r) => `<a class="region" href="#resultaten" data-action="region" data-region="${esc(r)}"><strong>${esc(r)}</strong><span class="mono">${regionCount(r)} vacatures</span></a>`).join("")}
+        </div>
+      </section>
+      <section>
+        <div class="section-head"><h2>Nieuw deze week</h2><a href="#resultaten" data-action="all-jobs">Alle vacatures →</a></div>
+        <div class="job-list">${fresh.map((job) => jobCard({ job })).join("")}</div>
+      </section>
+    </div>`;
+  }
+
+  function filterPanel(base) {
+    const f = state.filters;
+    const count = (key, test) => base.filter((r) => passFilters(r.job, f, key) && test(r.job)).length;
+    const group = (title, key, options) => `
+      <fieldset class="fgroup"><legend>${title}</legend>
+        ${options.map(([val, label]) => {
+          const n = count(key, (j) => (key === "lang" ? j.langs.includes(val) : j[key] === val));
+          const on = f[key].has(val);
+          return `<label class="check ${n === 0 && !on ? "zero" : ""}"><input type="checkbox" data-filter="${key}" value="${esc(val)}" ${on ? "checked" : ""}> ${esc(label)} <span class="n">${n}</span></label>`;
+        }).join("")}
+      </fieldset>`;
+    const activeN = f.cat.size + f.contract.size + f.regime.size + f.lang.size + (f.remote ? 1 : 0) + (f.knelpunt ? 1 : 0) + (f.minSal ? 1 : 0) + (f.posted ? 1 : 0);
+    return `
+    <details class="filters" id="filters" ${matchMedia("(max-width: 960px)").matches && !activeN ? "" : "open"}>
+      <summary>Filters ${activeN ? `<span class="count">${activeN}</span>` : ""} ${ICON.chev}</summary>
+      <div class="filter-body">
+        ${activeN ? `<button class="linkbtn" data-action="clear-filters" style="justify-self:start">Wis alle filters</button>` : ""}
+        <fieldset class="fgroup"><legend>Snel</legend>
+          <label class="check"><input type="checkbox" data-filter="remote" ${f.remote ? "checked" : ""}> Thuiswerk mogelijk <span class="n">${count("remote", (j) => j.remote !== "geen")}</span></label>
+          <label class="check"><input type="checkbox" data-filter="knelpunt" ${f.knelpunt ? "checked" : ""}> Knelpuntberoep <span class="n">${count("knelpunt", (j) => j.knelpunt)}</span></label>
+        </fieldset>
+        ${group("Sector", "cat", JW.CATEGORIES.map((c) => [c.id, c.label]))}
+        ${group("Contract", "contract", [["vast", "Vast contract"], ["tijdelijk", "Tijdelijk"], ["interim", "Interim"], ["freelance", "Freelance"], ["studentenjob", "Studentenjob"], ["flexi-job", "Flexi-job"]])}
+        ${group("Regime", "regime", [["voltijds", "Voltijds"], ["deeltijds", "Deeltijds"]])}
+        ${group("Werktaal", "lang", [["NL", "Nederlands"], ["FR", "Frans"], ["EN", "Engels"], ["DE", "Duits"]])}
+        <label class="field"><span>Minimum brutoloon</span>
+          <select data-filter="minSal" id="f-minsal">
+            ${[0, 2500, 3000, 3500, 4000, 4500].map((v) => `<option value="${v}" ${f.minSal === v ? "selected" : ""}>${v ? "Tot minstens " + eur(v) : "Alle lonen"}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field"><span>Online sinds</span>
+          <select data-filter="posted" id="f-posted">
+            ${[[0, "Om het even"], [1, "Laatste 24 uur"], [7, "Laatste 7 dagen"], [14, "Laatste 14 dagen"]].map(([v, l]) => `<option value="${v}" ${f.posted === v ? "selected" : ""}>${l}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+    </details>`;
+  }
+
+  function renderResults() {
+    let base, headTitle, top = "";
+    const isPrompt = state.mode === "prompt" && state.prompt.trim();
+    if (isPrompt) {
+      const { results, all, crit } = promptSearch();
+      base = results;
+      const chips = all.map((c) => state.removed.has(c.id)
+        ? `<span class="chip off"><button type="button" data-action="restore-crit" data-id="${c.id}" class="linkbtn" style="width:auto;height:auto;text-decoration:none">+ ${esc(c.group)}: ${esc(c.label)}</button></span>`
+        : `<span class="chip"><span>${esc(c.group)}: <b>${esc(c.label)}</b></span><button type="button" data-action="remove-crit" data-id="${c.id}" aria-label="Verwijder ${esc(c.group)}: ${esc(c.label)}">✕</button></span>`).join("");
+      top = `
+      <section class="interpret" aria-label="Zo begrepen we je vraag">
+        <div class="interpret-head"><h2>Zo begrepen we je vraag</h2><button class="linkbtn" data-action="edit-prompt">Vraag aanpassen</button></div>
+        <p class="quote">“${esc(state.prompt.trim())}”</p>
+        ${all.length ? `<div class="chips">${chips}</div><p class="muted" style="font-size:14px">Klopt iets niet? Haal een criterium weg met ✕. Jobs die op een harde voorwaarde (functie of plaats) niet passen, tonen we niet.</p>`
+          : `<p class="notice">We vonden geen duidelijke criteria in je vraag. Noem bijvoorbeeld een functie (“verpleegkundige”), een plaats (“rond Leuven”) of uren (“deeltijds”). We tonen intussen alle vacatures.</p>`}
+      </section>`;
+      headTitle = crit.length ? "passende jobs" : "vacatures";
+    } else {
+      const { results, place } = classicSearch();
+      base = results;
+      const what = state.wat.trim() ? ` voor <span class="mono">“${esc(state.wat.trim())}”</span>` : "";
+      const where = place && !place.error ? ` in ${esc(place.label)}${place.type === "city" ? (state.radius ? ` <span class="muted" style="font-size:.7em">+ ${state.radius} km</span>` : "") : ""}` : "";
+      headTitle = "vacatures" + what + where;
+      if (place && place.error) top = `<p class="notice">We kennen de plaats “${esc(place.label)}” niet. Probeer een gemeente, postcode of provincie. We tonen jobs in heel België.</p>`;
+    }
+    const filtered = base.filter((r) => passFilters(r.job, state.filters));
+    const sorted = sortResults(filtered);
+    state.lastList = sorted.map((r) => r.job.id);
+    state.lastResults = sorted;
+    const hasDist = sorted.some((r) => r.dist != null);
+
+    return `
+    <section class="band compact" aria-hidden="true"></section>
+    <div class="wrap"><div class="search-wrap">${searchPanel(false)}</div></div>
+    <div class="wrap results-page">
+      ${top}
+      <div class="res-layout">
+        ${filterPanel(base)}
+        <section aria-live="polite">
+          <div class="res-head">
+            <h1><span class="mono">${sorted.length}</span> ${headTitle}</h1>
+            <label class="sort">Sorteer
+              <select id="f-sort" data-action="sort">
+                <option value="relevantie" ${state.sort === "relevantie" ? "selected" : ""}>${isPrompt ? "Beste match" : "Relevantie"}</option>
+                <option value="datum" ${state.sort === "datum" ? "selected" : ""}>Nieuwste eerst</option>
+                <option value="loon" ${state.sort === "loon" ? "selected" : ""}>Hoogste loon</option>
+                ${hasDist ? `<option value="afstand" ${state.sort === "afstand" ? "selected" : ""}>Dichtstbij</option>` : ""}
+              </select>
+            </label>
+          </div>
+          <div class="job-list">
+            ${sorted.length ? sorted.map((r) => jobCard(r, { match: isPrompt })).join("") : `
+              <div class="empty">
+                <h2>Geen jobs gevonden</h2>
+                <p class="muted">Maak je zoekopdracht ruimer: vergroot de straal, haal een filter of criterium weg of probeer een ander woord.</p>
+                <button class="btn ghost" data-action="clear-filters">Wis alle filters</button>
+              </div>`}
+          </div>
+        </section>
+      </div>
+    </div>`;
+  }
+
+  function renderDetail(id) {
+    const job = byId[id];
+    if (!job) return `<div class="wrap detail-page"><div class="empty"><h2>Deze vacature bestaat niet (meer)</h2><a class="btn primary" href="#resultaten" data-action="all-jobs">Bekijk alle vacatures</a></div></div>`;
+    state.visited.add(id);
+    store.set("jw-visited", Array.from(state.visited));
+
+    const fromSearch = state.hasSearch && state.lastList.includes(id);
+    const idx = state.lastList.indexOf(id);
+    const prev = idx > 0 ? state.lastList[idx - 1] : null;
+    const next = idx >= 0 && idx < state.lastList.length - 1 ? state.lastList[idx + 1] : null;
+
+    let why = "";
+    if (state.mode === "prompt" && state.prompt.trim()) {
+      const crit = activeCriteria();
+      if (crit.length) {
+        const r = JW.scoreJobs([job], crit)[0] || (() => { const all = JW.scoreJobs([job], crit.map((c) => ({ ...c, hard: false })))[0]; return all; })();
+        why = `
+        <section class="why-box">
+          <h2>Past bij je vraag: <span class="mono">${Math.round(r.score * 100)}%</span></h2>
+          <ul class="reasons">${r.hits.map((h) => `<li class="ok">${esc(h.text)}</li>`).join("")}${r.misses.map((m) => `<li class="no">${esc(m.text)}</li>`).join("")}</ul>
+        </section>`;
+      }
+    }
+
+    const similar = JOBS.filter((j) => j.id !== id && (j.role === job.role || j.cat === job.cat))
+      .map((j) => ({ job: j, dist: JW.distanceKm(job, j), same: j.role === job.role }))
+      .sort((a, b) => (b.same - a.same) || a.dist - b.dist).slice(0, 3);
+
+    const applied = state.applied[id];
+    const langs = job.langs.map((l) => JW.LANG_LABEL[l]).join(", ");
+
+    return `
+    <div class="wrap detail-page">
+      <nav class="crumbs" aria-label="Navigatie">
+        ${fromSearch ? `<a href="#resultaten">← Terug naar resultaten</a><span>·</span><span class="mono">${idx + 1} / ${state.lastList.length}</span>
+          ${prev ? `<a href="#job-${prev}">Vorige</a>` : ""}${next ? `<a href="#job-${next}">Volgende</a>` : ""}` : `<a href="#home">Jobwijs</a><span>/</span><a href="#resultaten" data-action="cat" data-cat="${job.cat}">${esc(job.catLabel)}</a><span>/</span><span>${esc(job.title)}</span>`}
+      </nav>
+      <header class="detail-head">
+        ${logo(job.company, true)}
+        <div>
+          <h1>${esc(job.title)}</h1>
+          <p class="company"><strong>${esc(job.company.name)}</strong> · ${esc(job.company.size)}</p>
+          <div class="facts">
+            <span>${ICON.pin}${esc(job.city)} <span class="muted">(${job.pc}, ${esc(job.prov)})</span></span>
+            <span>${ICON.doc}${esc(JW.contractLabel(job.contract))}</span>
+            <span>${ICON.clock}${job.regime === "voltijds" ? "Voltijds" : "Deeltijds"} · ${esc(job.hours)}</span>
+            <span>${ICON.home}${remoteLabel(job.remote)}</span>
+          </div>
+          <div class="meta" style="margin-top:12px">
+            ${job.knelpunt ? `<span class="tag knelpunt">${ICON.flame}Knelpuntberoep</span>` : ""}
+            <span class="tag">${esc(job.catLabel)}</span>
+            <span class="tag">${postedLabel(job.daysAgo)} geplaatst</span>
+          </div>
+        </div>
+      </header>
+      <div class="detail-layout">
+        <article class="detail-body">
+          ${why}
+          <section><h2>De job</h2><p>${esc(job.intro)}</p></section>
+          <section><h2>Wat ga je doen?</h2><ul>${job.tasks.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>
+          <section><h2>Wie zoeken we?</h2><ul>${job.profile.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>
+          <section>
+            <h2>Wat bieden we?</h2>
+            <p>Een brutomaandloon tussen <strong class="mono">${eur(job.salMin)}</strong> en <strong class="mono">${eur(job.salMax)}</strong> (${job.regime === "voltijds" ? "voltijds" : "voltijdse equivalent"}), volgens de barema's van ${esc(job.paritair === "Onderwijs" ? "het onderwijs" : job.paritair)} en je ervaring. Daarbovenop:</p>
+            <ul class="benefits">${job.benefits.map((b) => `<li>${esc(JW.BENEFITS[b])}</li>`).join("") || "<li>Vakantiegeld en eindejaarspremie</li>"}</ul>
+          </section>
+          <section><h2>Over ${esc(job.company.name)}</h2><p>${esc(job.company.about)}</p></section>
+        </article>
+        <aside class="apply-card" aria-label="Solliciteren">
+          <p class="big-sal">${eur(job.salMin)} – ${eur(job.salMax)}<small>bruto per maand</small></p>
+          ${applied ? `<p class="applied">Je solliciteerde op ${esc(applied)}.</p>` : `<button class="btn primary block" data-action="apply" data-id="${id}">Solliciteer nu</button>`}
+          <button class="btn ghost block" data-action="save" data-id="${id}" aria-pressed="${state.saved.has(id)}">${state.saved.has(id) ? ICON.bookmarkFill + " Bewaard" : ICON.bookmark + " Bewaar deze job"}</button>
+          <dl class="dl">
+            <dt>Referentie</dt><dd class="mono">${job.ref}</dd>
+            <dt>Start</dt><dd>${esc(job.start)}</dd>
+            <dt>Diploma</dt><dd>${eduLabel(job.edu)}</dd>
+            <dt>Ervaring</dt><dd>${expLabel(job.exp)}</dd>
+            <dt>Talen</dt><dd>${esc(langs)}</dd>
+            <dt>Paritair comité</dt><dd class="mono">${esc(job.paritair)}</dd>
+            <dt>Bekeken</dt><dd class="mono">${job.views}×</dd>
+          </dl>
+        </aside>
+      </div>
+      <section class="similar">
+        <h2>Vergelijkbare jobs</h2>
+        <div class="job-list">${similar.map((r) => jobCard({ job: r.job, dist: r.dist })).join("")}</div>
+      </section>
+    </div>`;
+  }
+
+  function renderSaved() {
+    const list = Array.from(state.saved).map((id) => byId[id]).filter(Boolean);
+    return `
+    <div class="wrap results-page">
+      <div class="res-head"><h1><span class="mono">${list.length}</span> bewaarde ${list.length === 1 ? "job" : "jobs"}</h1></div>
+      <div class="job-list">
+        ${list.length ? list.map((job) => jobCard({ job })).join("") : `
+          <div class="empty">
+            <h2>Nog niets bewaard</h2>
+            <p class="muted">Klik op het bladwijzer-icoon bij een vacature om ze hier terug te vinden. Bewaarde jobs blijven in deze browser staan.</p>
+            <a class="btn primary" href="#resultaten" data-action="all-jobs">Bekijk vacatures</a>
+          </div>`}
+      </div>
+    </div>`;
+  }
+
+  /* ---------- Router ---------- */
+  function route() {
+    const h = (location.hash || "#home").slice(1);
+    const app = $("#app");
+    const prevRoute = state.lastRoute;
+    if (prevRoute === "resultaten") state.resultsScroll = window.scrollY;
+    let html;
+    if (h.startsWith("job-")) html = renderDetail(h.slice(4));
+    else if (h === "resultaten") html = renderResults();
+    else if (h === "bewaard") html = renderSaved();
+    else html = renderHome();
+    app.innerHTML = html;
+    document.title = h.startsWith("job-") && byId[h.slice(4)] ? byId[h.slice(4)].title + " · Jobwijs" : "Jobwijs";
+    state.lastRoute = h;
+    if (h === "resultaten" && prevRoute.startsWith("job-")) window.scrollTo(0, state.resultsScroll);
+    else if (h !== prevRoute) window.scrollTo(0, 0);
+    updateSavedCount();
+  }
+
+  function rerenderResults() {
+    const y = window.scrollY;
+    if (location.hash === "#resultaten") { $("#app").innerHTML = renderResults(); window.scrollTo(0, y); }
+    else location.hash = "resultaten";
+  }
+
+  function go(hash) {
+    if (location.hash === "#" + hash) route();
+    else location.hash = hash;
+  }
+
+  function runClassic() {
+    state.mode = "classic";
+    state.hasSearch = true;
+    state.sort = "relevantie";
+    go("resultaten");
+  }
+  function runPrompt(text) {
+    state.mode = "prompt";
+    state.prompt = text;
+    state.removed = new Set();
+    state.filters = emptyFilters();
+    state.hasSearch = true;
+    state.sort = "relevantie";
+    go("resultaten");
+  }
+
+  /* ---------- Events ---------- */
+  document.addEventListener("submit", (e) => {
+    const form = e.target;
+    e.preventDefault();
+    if (form.id === "classic-form") {
+      state.wat = $("#f-wat").value;
+      state.waar = $("#f-waar").value;
+      state.radius = +$("#f-radius").value;
+      state.filters = emptyFilters();
+      runClassic();
+    } else if (form.id === "prompt-form") {
+      const text = $("#f-prompt").value.trim();
+      if (!text) { $("#f-prompt").focus(); toast("Beschrijf eerst kort welke job je zoekt"); return; }
+      runPrompt(text);
+    } else if (form.id === "apply-form") {
+      const id = form.dataset.id;
+      const today = new Date().toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" });
+      state.applied[id] = today;
+      store.set("jw-applied", state.applied);
+      const job = byId[id];
+      $("#apply-body").innerHTML = `
+        <div class="success">
+          <span class="tick">${ICON.check}</span>
+          <h2 id="apply-title">Sollicitatie verstuurd</h2>
+          <p>${esc(job.company.name)} ontvangt je kandidatuur voor <strong>${esc(job.title)}</strong>. Je krijgt doorgaans binnen vijf werkdagen antwoord.</p>
+          <p class="muted" style="font-size:14px">Dit is een prototype: er werd niets verzonden.</p>
+          <button class="btn primary" data-action="close-dialog">Sluiten</button>
+        </div>`;
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-action]");
+    if (!el) return;
+    const a = el.dataset.action;
+    if (a === "mode") {
+      state.mode = el.dataset.mode;
+      const isPrompt = state.mode === "prompt";
+      $$(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.mode === state.mode)));
+      $("#classic-form").hidden = isPrompt;
+      $("#prompt-form").hidden = !isPrompt;
+      (isPrompt ? $("#f-prompt") : $("#f-wat")).focus();
+    } else if (a === "example") {
+      const ta = $("#f-prompt");
+      ta.value = el.dataset.text;
+      ta.focus();
+    } else if (a === "run-prompt") {
+      runPrompt(el.dataset.text);
+    } else if (a === "all-jobs") {
+      e.preventDefault();
+      Object.assign(state, { mode: "classic", wat: "", waar: "", radius: 25, filters: emptyFilters(), hasSearch: true, sort: "datum" });
+      go("resultaten");
+    } else if (a === "cat") {
+      e.preventDefault();
+      Object.assign(state, { mode: "classic", wat: "", waar: "", filters: emptyFilters(), hasSearch: true, sort: "datum" });
+      state.filters.cat.add(el.dataset.cat);
+      go("resultaten");
+    } else if (a === "region") {
+      e.preventDefault();
+      Object.assign(state, { mode: "classic", wat: "", waar: el.dataset.region, radius: 25, filters: emptyFilters(), hasSearch: true, sort: "datum" });
+      go("resultaten");
+    } else if (a === "save") {
+      e.preventDefault();
+      const id = el.dataset.id;
+      if (state.saved.has(id)) { state.saved.delete(id); toast("Verwijderd uit je bewaarde jobs"); }
+      else { state.saved.add(id); toast("Bewaard. Je vindt deze job terug onder Bewaard"); }
+      store.set("jw-saved", Array.from(state.saved));
+      const y = window.scrollY;
+      route();
+      window.scrollTo(0, y);
+    } else if (a === "remove-crit") {
+      state.removed.add(el.dataset.id);
+      rerenderResults();
+    } else if (a === "restore-crit") {
+      state.removed.delete(el.dataset.id);
+      rerenderResults();
+    } else if (a === "edit-prompt") {
+      state.mode = "prompt";
+      window.scrollTo(0, 0);
+      const ta = $("#f-prompt");
+      if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    } else if (a === "clear-filters") {
+      state.filters = emptyFilters();
+      rerenderResults();
+    } else if (a === "apply") {
+      openApply(el.dataset.id);
+    } else if (a === "close-dialog") {
+      $("#apply-dialog").close();
+    }
+  });
+
+  document.addEventListener("change", (e) => {
+    const el = e.target;
+    if (el.dataset.filter) {
+      const k = el.dataset.filter;
+      const f = state.filters;
+      if (k === "remote" || k === "knelpunt") f[k] = el.checked;
+      else if (k === "minSal" || k === "posted") f[k] = +el.value;
+      else if (el.checked) f[k].add(el.value);
+      else f[k].delete(el.value);
+      rerenderResults();
+    } else if (el.id === "f-sort") {
+      state.sort = el.value;
+      rerenderResults();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.target.id === "f-prompt") {
+      e.target.form.requestSubmit();
+    }
+  });
+
+  function openApply(id) {
+    const job = byId[id];
+    const dlg = $("#apply-dialog");
+    $("#apply-body").innerHTML = `
+      <div class="dialog-head">
+        <div><p class="eyebrow">${esc(job.company.name)} · ${job.ref}</p><h2 id="apply-title">Solliciteer als ${esc(job.title)}</h2></div>
+        <button class="x" type="button" data-action="close-dialog" aria-label="Sluiten">✕</button>
+      </div>
+      <form id="apply-form" data-id="${id}" class="form-grid">
+        <label class="field"><span>Voornaam</span><input id="a-first" required autocomplete="given-name"></label>
+        <label class="field"><span>Naam</span><input id="a-last" required autocomplete="family-name"></label>
+        <label class="field full"><span>E-mail</span><input id="a-mail" type="email" required autocomplete="email" placeholder="naam@voorbeeld.be"></label>
+        <label class="field full"><span>Gsm</span><input id="a-tel" type="tel" autocomplete="tel" placeholder="+32 4xx xx xx xx"></label>
+        <label class="field full"><span>Cv (pdf of docx)</span><input id="a-cv" type="file" accept=".pdf,.doc,.docx"></label>
+        <label class="field full"><span>Waarom deze job?</span><textarea id="a-why" placeholder="Een paar zinnen volstaan."></textarea></label>
+        <label class="consent full"><input id="a-ok" type="checkbox" required> Ik geef ${esc(job.company.name)} toestemming om mijn gegevens te gebruiken voor deze sollicitatie (GDPR).</label>
+        <button class="btn primary full" type="submit">Verstuur sollicitatie</button>
+      </form>`;
+    dlg.showModal();
+    setTimeout(() => $("#a-first").focus(), 30);
+  }
+
+  $("#apply-dialog").addEventListener("close", () => { if (location.hash.startsWith("#job-")) { const y = window.scrollY; route(); window.scrollTo(0, y); } });
+  $("#apply-dialog").addEventListener("click", (e) => { if (e.target.id === "apply-dialog") e.target.close(); });
+
+  window.addEventListener("hashchange", route);
+  route();
+})();
+</script>
+</body>
+</html>
