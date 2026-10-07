@@ -40,7 +40,7 @@ Geen build of installatie nodig:
 
 ```
 index.html        pagina-skelet (header, footer, sollicitatiedialoog)
-css/styles.css    vormgeving, licht en donker thema, responsive
+css/styles.css    vormgeving (lichtblauwe zoekband, filterknoppen, lijst + detailpaneel), responsive
 js/data.js        steden, sectoren, fictieve bedrijven en rolsjablonen → vacatures
 js/prompt.js      interpretatie van de prompt + matchscore
 js/app.js         routing (#home, #resultaten, #job-…, #bewaard), zoeken, filters, weergave
